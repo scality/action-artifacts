@@ -1,0 +1,157 @@
+#!/bin/bash
+
+set -e
+
+declare SCRIPT SCRIPT_DIR
+
+SCRIPT=$(readlink -f "${BASH_SOURCE[0]}")
+SCRIPT_DIR=${SCRIPT%/*}
+
+
+set_output() {
+    local -r name=$1
+    local -r value=$2
+    echo "::set-output name=${name}::${value}"
+}
+
+
+setup() {
+    NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${WORKFLOW_NAME}.${RUN_NUMBER}"
+    LINK="${URL}/builds/${NAME}"
+
+    set_output 'name' "${NAME}"
+    set_output 'link' "${LINK}"
+}
+
+prolong() {
+    echo "TODO"
+}
+
+promote() {
+    echo "TODO"
+}
+
+upload() {
+    echo "TODO"
+}
+
+usage() {
+
+    cat <<HELP
+$SCRIPT:
+
+HELP
+}
+
+declare -r LONG_OPTS='
+url:,
+user:,
+password:,
+repository:,
+commit-timestamp:,
+commit-short-revision:,
+workflow-name:,
+run-number:,
+tag:,
+source:,
+debug,
+help,
+setup,
+upload,
+prolong,
+promote'
+
+OPTS=$(getopt -n "$0" -o "h" --long "$LONG_OPTS" -- "$@") || exit 1
+
+eval set -- "$OPTS"
+
+declare URL=""
+declare USER=""
+declare PASSWORD=""
+declare REPOSITORY=""
+declare COMMIT_TIMESTAMP=""
+declare COMMIT_SHORT_REVISION=""
+declare WORKFLOW_NAME=""
+declare RUN_NUMBER=""
+declare TAG=""
+declare SOURCE=""
+
+while true; do
+    case $1 in
+        --url)
+            URL=${2:?--url argument is not set}
+            shift
+            ;;
+        --user)
+            USER=${2:?--user argument is not set}
+            shift
+            ;;
+        --password)
+            PASSWORD=${2:?--password argument is not set}
+            shift
+            ;;
+        --repository)
+            REPOSITORY=${2:?--repository argument is not set}
+            shift
+            ;;
+        --commit-timestamp)
+            COMMIT_TIMESTAMP=${2:?--commit-timestamp argument is not set}
+            shift
+            ;;
+        --commit-short-revision)
+            COMMIT_SHORT_REVISION=${2:?--commit-short-revision argument is not set}
+            shift
+            ;;
+        --workflow-name)
+            WORKFLOW_NAME=${2:?--workflow-name argument is not set}
+            shift
+            ;;
+        --run-number)
+            RUN_NUMBER=${2:?--run-number argument is not set}
+            shift
+            ;;
+        --tag)
+            TAG=${2:?--tag argument is not set}
+            shift
+            ;;
+        --source)
+            SOURCE=${2:?--source argument is not set}
+            shift
+            ;;
+        --debug)
+            set -xv
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --setup)
+            setup
+            exit $?
+            ;;
+        --upload)
+            upload
+            exit $?
+            ;;
+        --promote)
+            promote
+            exit $?
+            ;;
+        --prolong)
+            prolong
+            exit $?
+            ;;
+        --)
+            shift
+            if [ $# -gt 0 ]; then
+                echo "Warning: Ignoring arguments \"$*\"" >&2
+            fi
+            break
+            ;;
+        *)
+            echo "Error: Argument invalid: $1" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
