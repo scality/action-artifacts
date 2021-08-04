@@ -1,0 +1,75 @@
+---
+name: 'Artifacts Setup'
+description: 'Set outputs to work with Artifacts Actions'
+inputs:
+  url:
+    description: 'The url of Artifacts'
+    required: true
+  user:
+    description: |
+      The user to authenticate with Artifacts.
+      Usually setup as a secret in the organization,
+      ask your admin for the key name.
+    required: true
+  password:
+    description: |
+      The password to authenticate the operation with Artifacts.
+    required: true
+  method:
+    description: |
+      What kind of interaction you will perform with Artifacts.
+      With the choice of: setup, upload, promote, prolong.
+    required: true
+  name:
+    description: |
+      The name of the artifacts build you will use.
+      Only used with prolong and promote method
+    required: false
+    default: ''
+  tag:
+    description: |
+      The git tag name of the artifacts you are going to promote.
+      To be used with `promote` method.
+    required: false
+    default: ''
+  source:
+    description: |
+      File or directory to upload. To be used with the upload method.
+    required: false
+    default: '.'
+outputs:
+  name:
+    description: |
+      The name of the artifacts for a specific workflow.
+      This name will be unique for the whole workflow and can be
+      used by further steps to locate the artifacts inside a job.
+    value: ${{ steps.artifacts.outputs.name }}
+  link:
+    description: |
+      The full url in which artifacts will be stored.
+    value: ${{ steps.artifacts.outputs.link }}
+runs:
+  using: "composite"
+  steps:
+    - name: Setup new properties for artifacts name
+      id: properties
+      run: |
+        echo "::set-output name=repository::$(echo ${{ github.repository }} | sed 's/\//:/')"
+        echo "::set-output name=commit-timestamp::$(date --date='${{ github.event.head_commit.timestamp }}' +"%s")"
+        echo "::set-output name=commit-short-revision::$(echo -n '${{ github.sha }}' | cut -c1-10)"
+        echo "::set-output name=workflow-name::$(echo -n '${{ github.workflow }}' | sed 's/\W/-/g' | sed 's/^-//g')"
+      shell: bash
+    - name: Launch artifacts commmand
+      id: artifacts
+      run: >
+        ./artifacts --url ${{ inputs.url }}
+        --user ${{ inputs.user }}
+        --password ${{ inputs.password }}
+        --repository ${{ steps.properties.outputs.repository }}
+        --commit-timestamp ${{ steps.properties.outputs.commit-timestamp }}
+        --commit-short-revision ${{ steps.properties.outputs.commit-short-revision }}
+        --workflow-name ${{ steps.properties.outputs.workflow-name }}
+        --run-number ${{ github.run_number }}
+        --source "${{ inputs.source }}"
+        --${{ inputs.method }}
+      shell: bash
