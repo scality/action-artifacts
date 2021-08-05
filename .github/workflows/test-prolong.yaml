@@ -1,0 +1,33 @@
+---
+name: test-prolong
+
+on: push
+
+jobs:
+  test-prolong:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo SUCCESS > .final_status
+      - name: Artifacts Upload
+        id: artifacts-upload
+        uses: ./
+        with:
+          url: ${{ secrets.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: .final_status
+          method: upload
+      - name: Artifacts Prolong
+        id: artifacts-prolong
+        uses: ./
+        with:
+          url: ${{ secrets.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          name: ${{ steps.artifacts-upload.outputs.name }}
+          method: prolong
+      - name: Print the artifacts name
+        run: |
+          echo ${{ steps.artifacts-setup.outputs.name }}
+          echo ${{ steps.artifacts-setup.outputs.link }}
