@@ -28,12 +28,32 @@ jobs:
           user: ${{ secret.ARTIFACTS_USER }}
           password: ${{ secret.ARTIFACTS_PASSWORD }}
       - run: |
-          curl ${{ steps.artifacts.outputs.artifact-link }}/my-file -o my-file
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }}  ${{ steps.artifacts.outputs.artifact-link }}/my-file -o my-file
 ```
 
 ### Upload
 
 Upload files to artifacts.
+
+Example:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload files to artifacts
+        id: artifacts
+        uses: scality/action-artifacts@v1
+        with:
+          method: upload
+          url: my.artifacts.url
+          user: ${{ secret.ARTIFACTS_USER }}
+          password: ${{ secret.ARTIFACTS_PASSWORD }}
+          source: ./file1 ./file2 ./dir1
+      - run: |
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.artifact-link }}/file1 -o file1
+```
 
 ### Promote
 
@@ -43,7 +63,22 @@ Artifacts can be promoted when a tag has been made to make a build available for
 
 Artifacts have an expiration date of 15 days. The prolong method allows you to make a copy of your build that will last longer.
 
-TODO: Add examples
+Example:
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Artifacts Prolong
+        id: artifacts-prolong
+        uses: ./
+        with:
+          url: ${{ secrets.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          name: 'githost:owner:repo:staging-1628004655.8e50acc6a1.pre-merge.28'
+          method: prolong
+```
 
 ## Inputs
 

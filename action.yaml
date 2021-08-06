@@ -25,7 +25,7 @@ inputs:
       The name of the artifacts build you will use.
       Only used with prolong and promote method
     required: false
-    default: ''
+    default: 'default'
   tag:
     description: |
       The git tag name of the artifacts you are going to promote.
@@ -70,6 +70,7 @@ runs:
         --commit-short-revision ${{ steps.properties.outputs.commit-short-revision }}
         --workflow-name ${{ steps.properties.outputs.workflow-name }}
         --run-number ${{ github.run_number }}
+        --name "${{ inputs.name }}"
         --source "${{ inputs.source }}"
         --${{ inputs.method }}
       shell: bash
