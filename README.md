@@ -28,7 +28,7 @@ jobs:
           user: ${{ secret.ARTIFACTS_USER }}
           password: ${{ secret.ARTIFACTS_PASSWORD }}
       - run: |
-          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }}  ${{ steps.artifacts.outputs.artifact-link }}/my-file -o my-file
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }}  ${{ steps.artifacts.outputs.link }}/my-file -o my-file
 ```
 
 ### Upload
@@ -52,12 +52,33 @@ jobs:
           password: ${{ secret.ARTIFACTS_PASSWORD }}
           source: ./file1 ./file2 ./dir1
       - run: |
-          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.artifact-link }}/file1 -o file1
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.link }}/file1 -o file1
 ```
 
 ### Promote
 
 Artifacts can be promoted when a tag has been made to make a build available forever.
+
+Example:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Promote artifacts by name
+        id: artifacts
+        uses: scality/action-artifacts@v1
+        with:
+          method: promote
+          url: my.artifacts.url
+          name: 'githost:owner:repo:staging-1628004655.8e50acc6a1.pre-merge.28'
+          tag: 'promote:tag'
+          user: ${{ secret.ARTIFACTS_USER }}
+          password: ${{ secret.ARTIFACTS_PASSWORD }}
+      - run: |
+          curl ${{ steps.artifacts.outputs.link }}/my-file -o my-file
+```
 
 ### Prolong
 
