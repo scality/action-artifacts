@@ -24,7 +24,19 @@ setup() {
 }
 
 prolong() {
-    echo "TODO"
+    if [ "${NAME}" = "default" ]; then
+      echo "Set an Artifacts name to prolong"
+      exit 2
+    fi
+
+    echo ${NAME} | grep -qE '^[^/]+\:staging\-[0-9]{10}\.[0-9a-f]+\.[^./]+\.[0-9]+$'
+    ARTIFACT_TARGET=$(echo ${NAME} | sed -E 's/(^[^/]+\:)staging(\-[0-9]{10}\.[0-9a-f]+\.[^./]+\.[0-9]+)$/\1prolonged\2/')
+    echo "copying '${NAME} to '${ARTIFACT_TARGET}'"
+
+    curl -u ${USER}:${PASSWORD} --silent --fail --show-error ${URL}/copy/${NAME}/${ARTIFACT_TARGET}/ | tail -1 | grep -qE '^BUILD COPIED$';
+
+    set_output 'name' "${ARTIFACT_TARGET}"
+    set_output 'link' "${URL}/builds/${ARTIFACT_TARGET}"
 }
 
 promote() {
@@ -64,6 +76,7 @@ workflow-name:,
 run-number:,
 tag:,
 source:,
+name:,
 debug,
 help,
 setup,
@@ -84,6 +97,7 @@ declare COMMIT_SHORT_REVISION=""
 declare WORKFLOW_NAME=""
 declare RUN_NUMBER=""
 declare TAG=""
+declare NAME=""
 declare SOURCE=""
 
 while true; do
@@ -122,6 +136,10 @@ while true; do
             ;;
         --tag)
             TAG=${2:?--tag argument is not set}
+            shift
+            ;;
+        --name)
+            NAME=${2:?--name argument is not set}
             shift
             ;;
         --source)
