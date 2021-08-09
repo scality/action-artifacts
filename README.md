@@ -28,12 +28,32 @@ jobs:
           user: ${{ secret.ARTIFACTS_USER }}
           password: ${{ secret.ARTIFACTS_PASSWORD }}
       - run: |
-          curl ${{ steps.artifacts.outputs.artifact-link }}/my-file -o my-file
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }}  ${{ steps.artifacts.outputs.artifact-link }}/my-file -o my-file
 ```
 
 ### Upload
 
 Upload files to artifacts.
+
+Example:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload files to artifacts
+        id: artifacts
+        uses: scality/action-artifacts@v1
+        with:
+          method: upload
+          url: my.artifacts.url
+          user: ${{ secret.ARTIFACTS_USER }}
+          password: ${{ secret.ARTIFACTS_PASSWORD }}
+          source: ./file1 ./file2 ./dir1
+      - run: |
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.artifact-link }}/file1 -o file1
+```
 
 ### Promote
 
