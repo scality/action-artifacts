@@ -91,6 +91,20 @@ upload() {
 
 }
 
+get() {
+    if [ "${INPUT_WORKFLOW_NAME}" = "default" ]; then
+      echo "Set a workflow name to get his Artifacts name"
+      exit 2
+    fi
+
+    NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${INPUT_WORKFLOW_NAME}.${RUN_NUMBER}"
+    LAST_SUCCESS_LINK=$(curl -u ${USER}:${PASSWORD} --silent --fail --show-error -L -I "${URL}/last_success/${NAME}" | grep -E "^location:.*\/download\/([^\/]+)\/");
+    GET_NAME=$(echo "${LAST_SUCCESS_LINK}" | sed -E 's/^location:.*\/download\/([^\/]+)\//\1/');
+
+    set_output 'name' "${GET_NAME}"
+    set_output 'link' "${URL}/builds/${GET_NAME}"
+}
+
 usage() {
 
     cat <<HELP
@@ -107,6 +121,7 @@ repository:,
 commit-timestamp:,
 commit-short-revision:,
 workflow-name:,
+input-workflow-name:,
 run-number:,
 tag:,
 source:,
@@ -114,6 +129,7 @@ name:,
 debug,
 help,
 setup,
+get,
 upload,
 prolong,
 promote'
@@ -133,6 +149,7 @@ declare RUN_NUMBER=""
 declare TAG=""
 declare NAME=""
 declare SOURCE=""
+declare INPUT_WORKFLOW_NAME=""
 
 while true; do
     case $1 in
@@ -162,6 +179,10 @@ while true; do
             ;;
         --workflow-name)
             WORKFLOW_NAME=${2:?--workflow-name argument is not set}
+            shift
+            ;;
+        --input-workflow-name)
+            INPUT_WORKFLOW_NAME=${2:?--input-workflow-name argument is not set}
             shift
             ;;
         --run-number)
@@ -201,6 +222,10 @@ while true; do
             ;;
         --prolong)
             prolong
+            exit $?
+            ;;
+        --get)
+            get
             exit $?
             ;;
         --)

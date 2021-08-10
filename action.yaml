@@ -37,6 +37,11 @@ inputs:
       File or directory to upload. To be used with the upload method.
     required: false
     default: '.'
+  workflow-name:
+    description: |
+      Name of the workflow file you want to have the Artifacts name.
+    required: false
+    default: 'default'
 outputs:
   name:
     description: |
@@ -69,6 +74,7 @@ runs:
         --commit-timestamp ${{ steps.properties.outputs.commit-timestamp }}
         --commit-short-revision ${{ steps.properties.outputs.commit-short-revision }}
         --workflow-name ${{ steps.properties.outputs.workflow-name }}
+        --input-workflow-name "${{ inputs.workflow-name }}"
         --run-number ${{ github.run_number }}
         --name "${{ inputs.name }}"
         --tag "${{ inputs.tag }}"
