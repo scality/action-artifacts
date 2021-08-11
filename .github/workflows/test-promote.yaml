@@ -1,0 +1,78 @@
+---
+name: test-promote
+
+on: push
+
+jobs:
+  test-promote:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACTS_URL: http://localhost:8000
+    services:
+      cloudserver-front:
+        image: "zenko/cloudserver:8.1.2"
+        env:
+          REMOTE_MANAGEMENT_DISABLE: 1
+          LOG_LEVEL: debug
+          ENDPOINT: "cloudserver-front"
+          CI: false
+        ports:
+        - 8080:8000
+      artifacts:
+        image: "registry.scality.com/artifacts/artifacts:4.0.5"
+        ports:
+          - 8000:80
+        env:
+          AWS_SECRET_ACCESS_KEY: verySecretKey1
+          AWS_ACCESS_KEY_ID: accessKey1
+          AWS_BUCKET_PREFIX: artifacts
+          ENDPOINT_URL: http://cloudserver-front:8000
+          AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
+          GITHUB_API_COMPANY: scality
+          GITHUB_API_ENABLED: true
+    steps:
+      - name: Waiting for cloudserver to boot
+        run: |
+          ret=0
+          while [[ $ret != "200" ]]; do
+            echo Waiting for cloudserver
+            ret=$(docker exec ${{ job.services.cloudserver-front.id }} curl -s -o /dev/null -L -w ''%{http_code}'' http://localhost:8000/_/healthcheck/deep)
+            sleep 5
+          done
+      - name: Creating buckets
+        run: |
+          aws s3 mb s3://${AWS_BUCKET_PREFIX}-staging --endpoint-url ${ENDPOINT_URL} --region us-east-1
+          aws s3 mb s3://${AWS_BUCKET_PREFIX}-prolonged --endpoint-url ${ENDPOINT_URL} --region us-east-1
+          aws s3 mb s3://${AWS_BUCKET_PREFIX}-promoted --endpoint-url ${ENDPOINT_URL} --region us-east-1
+        env:
+          AWS_SECRET_ACCESS_KEY: verySecretKey1
+          AWS_ACCESS_KEY_ID: accessKey1
+          AWS_BUCKET_PREFIX: artifacts
+          ENDPOINT_URL: http://localhost:8080
+      - uses: actions/checkout@v2
+      - run: echo SUCCESS > .final_status
+      - name: Artifacts Upload
+        id: artifacts-upload
+        uses: ./
+        with:
+          url: ${{ env.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: .final_status
+          method: upload
+      - name: Tag the repo
+        run: git tag 1.0.0
+      - name: Artifacts Promote
+        id: artifacts-promote
+        uses: ./
+        with:
+          url: ${{ env.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          name: ${{ steps.artifacts-upload.outputs.name }}
+          tag: '1.0.0'
+          method: promote
+      - name: Print the artifacts name
+        run: |
+          echo ${{ steps.artifacts-promote.outputs.name }}
+          echo ${{ steps.artifacts-promote.outputs.link }}
