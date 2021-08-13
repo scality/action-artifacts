@@ -73,7 +73,7 @@ jobs:
         id: artifacts-prolong
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           name: 'githost:owner:repo:staging-1628004655.8e50acc6a1.pre-merge.28'
@@ -90,7 +90,7 @@ jobs:
         id: artifacts-get
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           workflow-name: test-get

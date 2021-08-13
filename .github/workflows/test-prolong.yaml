@@ -13,7 +13,7 @@ jobs:
         id: artifacts-upload
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: .final_status
@@ -22,7 +22,7 @@ jobs:
         id: artifacts-prolong
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           name: ${{ steps.artifacts-upload.outputs.name }}
