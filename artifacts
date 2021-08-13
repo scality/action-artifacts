@@ -63,11 +63,11 @@ promote() {
 
     # Copy artifacts to promote target name
     echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$' \
-      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$/\1\2/');
+      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$/\1/');
 
     echo $ARTIFACTS_PREFIX
     echo $NAME | grep -qE '^[^/]+\:(dev\-|preprod\-|)promoted\-[^/]+$' \
-      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(dev\-|preprod\-|)promoted\-[^/]+$/\1\2/');
+      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(dev\-|preprod\-|)promoted\-[^/]+$/\1/');
     ARTIFACTS_TARGET="${ARTIFACTS_PREFIX}promoted-${TAG}";
 
     echo "copying '${NAME}' to '${ARTIFACTS_TARGET}'";
