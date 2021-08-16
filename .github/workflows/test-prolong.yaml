@@ -29,5 +29,5 @@ jobs:
           method: prolong
       - name: Print the artifacts name
         run: |
-          echo ${{ steps.artifacts-setup.outputs.name }}
-          echo ${{ steps.artifacts-setup.outputs.link }}
+          echo ${{ steps.artifacts-prolong.outputs.name }}
+          echo ${{ steps.artifacts-prolong.outputs.link }}

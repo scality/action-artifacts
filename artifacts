@@ -40,7 +40,41 @@ prolong() {
 }
 
 promote() {
-    echo "TODO"
+    if [ "${NAME}" = "default" ] || [ "${TAG}" = "default" ]; then
+      echo "Set an Artifacts name and tag to promote"
+      exit 2
+    fi
+
+    # verify Name and tag
+    echo $NAME | grep -qE '^[^/]+\:((staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+|promoted\-[^/\-]+)$';
+    git tag -l | grep -E "^${TAG}$" | grep -qE '^[^/]+$';
+
+    # Verify that the commit got the good tag
+    echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$' \
+      && ARTIFACTS_COMMIT=$(echo ${NAME} | sed -E 's/^[^/]+\:(staging|prolonged)\-[0-9]{10}\.([0-9a-f]+)\.[^./]+\.[0-9]+$/\2/');
+    echo $NAME | grep -qE '^[^/]+\:promoted\-[^/]+$' \
+      && ARTIFACTS_COMMIT=$(echo ${NAME} | sed -E 's/^[^/]+\:promoted\-([^/]+)$/\1/');
+    TAG_COMMIT=$(git rev-list -n 1 "${TAG}");
+
+    case ${TAG_COMMIT} in
+      ${ARTIFACTS_COMMIT}*) ;;
+      *) exit 1;;
+    esac;
+
+    # Copy artifacts to promote target name
+    echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$' \
+      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$/\1/');
+
+    echo $ARTIFACTS_PREFIX
+    echo $NAME | grep -qE '^[^/]+\:(dev\-|preprod\-|)promoted\-[^/]+$' \
+      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(dev\-|preprod\-|)promoted\-[^/]+$/\1/');
+    ARTIFACTS_TARGET="${ARTIFACTS_PREFIX}promoted-${TAG}";
+
+    echo "copying '${NAME}' to '${ARTIFACTS_TARGET}'";
+    curl -u ${USER}:${PASSWORD} --silent --fail --show-error ${URL}/copy/${NAME}/${ARTIFACTS_TARGET}/ | grep -qE '^BUILD COPIED$'
+
+    set_output 'name' "${ARTIFACTS_TARGET}"
+    set_output 'link' "${URL}/builds/${ARTIFACTS_TARGET}"
 }
 
 upload() {
@@ -65,7 +99,7 @@ get() {
 
     NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${INPUT_WORKFLOW_NAME}.${RUN_NUMBER}"
     LAST_SUCCESS_LINK=$(curl -u ${USER}:${PASSWORD} --silent --fail --show-error -L -I "${URL}/last_success/${NAME}" | grep -E "^location:.*\/download\/([^\/]+)\/");
-    GET_NAME=$(echo "${LAST_SUCCESS_LINK}" | sed -E 's/^location:.*\/download\/([^\/]+)\//\1prolonged\1/');
+    GET_NAME=$(echo "${LAST_SUCCESS_LINK}" | sed -E 's/^location:.*\/download\/([^\/]+)\//\1/');
 
     set_output 'name' "${GET_NAME}"
     set_output 'link' "${URL}/builds/${GET_NAME}"

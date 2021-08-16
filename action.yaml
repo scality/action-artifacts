@@ -31,7 +31,7 @@ inputs:
       The git tag name of the artifacts you are going to promote.
       To be used with `promote` method.
     required: false
-    default: ''
+    default: 'default'
   source:
     description: |
       File or directory to upload. To be used with the upload method.
@@ -77,6 +77,7 @@ runs:
         --input-workflow-name "${{ inputs.workflow-name }}"
         --run-number ${{ github.run_number }}
         --name "${{ inputs.name }}"
+        --tag "${{ inputs.tag }}"
         --source "${{ inputs.source }}"
         --${{ inputs.method }}
       shell: bash

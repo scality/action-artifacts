@@ -59,6 +59,27 @@ jobs:
 
 Artifacts can be promoted when a tag has been made to make a build available forever.
 
+Example:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Promote artifacts by name
+        id: artifacts
+        uses: scality/action-artifacts@v1
+        with:
+          method: promote
+          url: my.artifacts.url
+          name: 'githost:owner:repo:staging-1628004655.8e50acc6a1.pre-merge.28'
+          tag: 'promote:tag'
+          user: ${{ secret.ARTIFACTS_USER }}
+          password: ${{ secret.ARTIFACTS_PASSWORD }}
+      - run: |
+          curl ${{ steps.artifacts.outputs.link }}/my-file -o my-file
+```
+
 ### Prolong
 
 Artifacts have an expiration date of 15 days. The prolong method allows you to make a copy of your build that will last longer.
