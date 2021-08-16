@@ -12,7 +12,7 @@ jobs:
         id: artifacts-setup
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           method: setup

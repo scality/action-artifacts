@@ -10,7 +10,7 @@ jobs:
       - id: artifacts-upload
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: action.yaml README.md
@@ -22,7 +22,7 @@ jobs:
       - name: Download file with artifacts-link
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
       - name: Download with  artifacts-url and artifacts-name
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ secrets.ARTIFACTS_URL }}/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 https://artifacts.scality.net/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
       - name: Compare files
         run: cmp --silent upload_action.yaml ./name_action.yaml
       - name: Compate files2
@@ -38,7 +38,7 @@ jobs:
       - name: Push all files
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./test-files
@@ -55,7 +55,7 @@ jobs:
         id: artifacts-upload
         uses: ./
         with:
-          url: ${{ secrets.ARTIFACTS_URL }}
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./big_file.txt
