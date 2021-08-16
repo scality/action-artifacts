@@ -1,0 +1,47 @@
+---
+name: test-get
+
+on: push
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo -n "SUCCESSFUL" > .final_status
+      - name: Artifacts Upload
+        id: artifacts-upload
+        uses: ./
+        with:
+          url: ${{ secrets.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: .final_status
+          method: upload
+      - name: Download file to update artifacts cache
+        run: |
+          curl -H 'ForceCacheUpdate: yes' \
+            -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  \
+            --silent --fail --show-error \
+            --max-time 3600 \
+            ${{ secrets.ARTIFACTS_URL }}/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
+
+  test-get:
+    needs:
+      - upload
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Artifacts Upload
+        id: artifacts-get
+        uses: ./
+        with:
+          url: ${{ secrets.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          workflow-name: test-get
+          method: get
+      - name: Print the artifacts name
+        run: |
+          echo ${{ steps.artifacts-get.outputs.name }}
+          echo ${{ steps.artifacts-get.outputs.link }}

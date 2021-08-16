@@ -101,6 +101,25 @@ jobs:
           method: prolong
 ```
 
+### Get
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Artifacts Upload
+        id: artifacts-get
+        uses: ./
+        with:
+          url: ${{ secrets.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          workflow-name: test-get
+          method: get
+      - run: |
+          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-get.outputs.link }}/file1 -o file1
+```
+
 ## Inputs
 
 This action take the following inputs:
@@ -110,11 +129,12 @@ This action take the following inputs:
 Usually setup as a secret in the organization, ask your admin for the key of it. This input is required.
 * `password`: The password to authenticate the operation with Artifacts. This input is required.
 * `method`: What kind of interaction you will perform with Artifacts.
-With the choice of: `setup`, `upload`, `promote`, `prolong`.
+With the choice of: `upload`, `promote`, `prolong` or `get`.
 This input is required.
-* `sources`: File or directory to upload. To be used with the upload method.
+* `sources`: File or directory to upload. To be used with the `upload` method.
 * `name`: The name of the artifacts build you will use. Only used with `prolong` and `promote` method.
 * `tag`: The git tag name of the artifacts you are going to promote. To be used with `promote` method.
+* `workflow-name`: Name of the workflow file you want to have the Artifacts name. To be used with `get` method.
 
 ## Outputs
 
