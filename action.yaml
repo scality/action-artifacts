@@ -76,6 +76,7 @@ runs:
         --workflow-name ${{ steps.properties.outputs.workflow-name }}
         --input-workflow-name "${{ inputs.workflow-name }}"
         --run-number ${{ github.run_number }}
+        --run-attempt ${{ github.run_attempt }}
         --name "${{ inputs.name }}"
         --tag "${{ inputs.tag }}"
         --source "${{ inputs.source }}"

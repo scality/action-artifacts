@@ -19,7 +19,7 @@ jobs:
         ports:
         - 8080:8000
       artifacts:
-        image: "registry.scality.com/artifacts/artifacts:4.0.5"
+        image: "registry.scality.com/artifacts/artifacts:4.0.8"
         ports:
           - 8000:80
         env:
@@ -30,6 +30,7 @@ jobs:
           AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
           GITHUB_API_COMPANY: scality
           GITHUB_API_ENABLED: true
+          GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
     steps:
       - name: Waiting for cloudserver to boot
         run: |
@@ -76,3 +77,4 @@ jobs:
         run: |
           echo ${{ steps.artifacts-promote.outputs.name }}
           echo ${{ steps.artifacts-promote.outputs.link }}
+

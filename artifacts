@@ -16,7 +16,7 @@ set_output() {
 
 
 setup() {
-    NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${WORKFLOW_NAME}.${RUN_NUMBER}"
+    NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${WORKFLOW_NAME}.${RUN_NUMBER}.${RUN_ATTEMPT}"
     LINK="${URL}/builds/${NAME}"
 
     set_output 'name' "${NAME}"
@@ -29,8 +29,8 @@ prolong() {
       exit 2
     fi
 
-    echo ${NAME} | grep -qE '^[^/]+\:staging\-[0-9]{10}\.[0-9a-f]+\.[^./]+\.[0-9]+$'
-    ARTIFACT_TARGET=$(echo ${NAME} | sed -E 's/(^[^/]+\:)staging(\-[0-9]{10}\.[0-9a-f]+\.[^./]+\.[0-9]+)$/\1prolonged\2/')
+    echo ${NAME} | grep -qE '^[^/]+\:staging\-[0-9]{10}\.[0-9a-f]+\.[^./]+\.[0-9]+\.[0-9]+$'
+    ARTIFACT_TARGET=$(echo ${NAME} | sed -E 's/(^[^/]+\:)staging(\-[0-9]{10}\.[0-9a-f]+\.[^./]+\.[0-9]+\.[0-9]+)$/\1prolonged\2/')
     echo "copying '${NAME} to '${ARTIFACT_TARGET}'"
 
     curl -u ${USER}:${PASSWORD} --silent --fail --show-error ${URL}/copy/${NAME}/${ARTIFACT_TARGET}/ | tail -1 | grep -qE '^BUILD COPIED$';
@@ -46,12 +46,12 @@ promote() {
     fi
 
     # verify Name and tag
-    echo $NAME | grep -qE '^[^/]+\:((staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+|promoted\-[^/\-]+)$';
+    echo $NAME | grep -qE '^[^/]+\:((staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+\.[0-9]+|promoted\-[^/\-]+)$';
     git tag -l | grep -E "^${TAG}$" | grep -qE '^[^/]+$';
 
     # Verify that the commit got the good tag
-    echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$' \
-      && ARTIFACTS_COMMIT=$(echo ${NAME} | sed -E 's/^[^/]+\:(staging|prolonged)\-[0-9]{10}\.([0-9a-f]+)\.[^./]+\.[0-9]+$/\2/');
+    echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+\.[0-9]+$' \
+      && ARTIFACTS_COMMIT=$(echo ${NAME} | sed -E 's/^[^/]+\:(staging|prolonged)\-[0-9]{10}\.([0-9a-f]+)\.[^./]+\.[0-9]+\.[0-9]+$/\2/');
     echo $NAME | grep -qE '^[^/]+\:promoted\-[^/]+$' \
       && ARTIFACTS_COMMIT=$(echo ${NAME} | sed -E 's/^[^/]+\:promoted\-([^/]+)$/\1/');
     TAG_COMMIT=$(git rev-list -n 1 "${TAG}");
@@ -62,8 +62,8 @@ promote() {
     esac;
 
     # Copy artifacts to promote target name
-    echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$' \
-      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+$/\1/');
+    echo $NAME | grep -qE '^[^/]+\:(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+\.[0-9]+$' \
+      && ARTIFACTS_PREFIX=$(echo $NAME | sed -E 's/(^[^/]+\:)(staging|prolonged)\-[0-9]{10}\.[0-9a-f]+.[^./]+\.[0-9]+\.[0-9]+$/\1/');
 
     echo $ARTIFACTS_PREFIX
     echo $NAME | grep -qE '^[^/]+\:(dev\-|preprod\-|)promoted\-[^/]+$' \
@@ -88,7 +88,6 @@ upload() {
         sed -e "s:\\(^\\|\\x0\\)\\./:\\1:g" | \
         xargs -0 -n 1 -t ${args} -I @ curl -u ${USER}:${PASSWORD} --silent --fail --show-error --max-time 3600 -T "@" \
         "${URL}/upload/${NAME}/"$(echo "@" | sed -e "s: :%20:g")
-
 }
 
 get() {
@@ -97,7 +96,7 @@ get() {
       exit 2
     fi
 
-    NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${INPUT_WORKFLOW_NAME}.${RUN_NUMBER}"
+    NAME="github:${REPOSITORY}:staging-${COMMIT_TIMESTAMP}.${COMMIT_SHORT_REVISION}.${INPUT_WORKFLOW_NAME}"
     LAST_SUCCESS_LINK=$(curl -u ${USER}:${PASSWORD} --silent --fail --show-error -L -I "${URL}/last_success/${NAME}" | grep -E "^location:.*\/download\/([^\/]+)\/");
     GET_NAME=$(echo "${LAST_SUCCESS_LINK}" | sed -E 's/^location:.*\/download\/([^\/]+)\//\1/');
 
@@ -123,6 +122,7 @@ commit-short-revision:,
 workflow-name:,
 input-workflow-name:,
 run-number:,
+run-attempt:,
 tag:,
 source:,
 name:,
@@ -146,6 +146,7 @@ declare COMMIT_TIMESTAMP=""
 declare COMMIT_SHORT_REVISION=""
 declare WORKFLOW_NAME=""
 declare RUN_NUMBER=""
+declare RUN_ATTEMPT=""
 declare TAG=""
 declare NAME=""
 declare SOURCE=""
@@ -187,6 +188,10 @@ while true; do
             ;;
         --run-number)
             RUN_NUMBER=${2:?--run-number argument is not set}
+            shift
+            ;;
+        --run-attempt)
+            RUN_ATTEMPT=${2:?--run-attempt argument is not set}
             shift
             ;;
         --tag)
