@@ -67,7 +67,7 @@ runs:
     - name: Launch artifacts commmand
       id: artifacts
       run: >
-        ./artifacts --url ${{ inputs.url }}
+        ${{ github.action_path }}/artifacts --url ${{ inputs.url }}
         --user ${{ inputs.user }}
         --password ${{ inputs.password }}
         --repository ${{ steps.properties.outputs.repository }}
