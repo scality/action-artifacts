@@ -25,10 +25,10 @@ jobs:
         with:
           method: setup
           url: my.artifacts.url
-          user: ${{ secret.ARTIFACTS_USER }}
-          password: ${{ secret.ARTIFACTS_PASSWORD }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
       - run: |
-          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }}  ${{ steps.artifacts.outputs.link }}/my-file -o my-file
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  ${{ steps.artifacts.outputs.link }}/my-file -o my-file
 ```
 
 ### Upload
@@ -48,11 +48,11 @@ jobs:
         with:
           method: upload
           url: my.artifacts.url
-          user: ${{ secret.ARTIFACTS_USER }}
-          password: ${{ secret.ARTIFACTS_PASSWORD }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./file1 ./file2 ./dir1
       - run: |
-          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.link }}/file1 -o file1
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.link }}/file1 -o file1
 ```
 
 ### Promote
@@ -74,8 +74,8 @@ jobs:
           url: my.artifacts.url
           name: 'githost:owner:repo:staging-1628004655.8e50acc6a1.pre-merge.28'
           tag: 'promote:tag'
-          user: ${{ secret.ARTIFACTS_USER }}
-          password: ${{ secret.ARTIFACTS_PASSWORD }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
       - run: |
           curl ${{ steps.artifacts.outputs.link }}/my-file -o my-file
 ```
@@ -117,7 +117,7 @@ jobs:
           workflow-name: test-get
           method: get
       - run: |
-          curl -u ${{ secret.ARTIFACTS_USER }}:${{ secret.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-get.outputs.link }}/file1 -o file1
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-get.outputs.link }}/file1 -o file1
 ```
 
 ## Inputs
