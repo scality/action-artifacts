@@ -84,10 +84,19 @@ upload() {
             args='-P 16'
     fi
 
-    find -L ${SOURCE} -type f -print0 | \
+    for i in ${SOURCE//, / }
+    do
+      OLDPWD=$PWD
+      if [ -d $i ]; then
+        cd $i
+      fi
+
+      find -L  -type f -print0 | \
         sed -e "s:\\(^\\|\\x0\\)\\./:\\1:g" | \
         xargs -0 -n 1 -t ${args} -I @ curl -u ${USER}:${PASSWORD} --silent --fail --show-error --max-time 3600 -T "@" \
         "${URL}/upload/${NAME}/"$(echo "@" | sed -e "s: :%20:g")
+      cd $OLDPWD
+    done
 }
 
 get() {
