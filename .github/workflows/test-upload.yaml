@@ -2,32 +2,6 @@ on: [push]
 name: test-upload
 
 jobs:
-  push-artifacts-action:
-    runs-on: ubuntu-latest
-    name: A job that push single files on artifacts
-    steps:
-      - uses: actions/checkout@v1
-      - id: artifacts-upload
-        uses: ./
-        with:
-          url: https://artifacts.scality.net
-          user: ${{ secrets.ARTIFACTS_USER }}
-          password: ${{ secrets.ARTIFACTS_PASSWORD }}
-          source: action.yaml README.md
-          method: upload
-      - name: Download file
-        run: curl -u  ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error  --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/README.md > upload_README.md
-      - name: Compare files
-        run: cmp --silent upload_README.md ./README.md
-      - name: Download file with artifacts-link
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
-      - name: Download with  artifacts-url and artifacts-name
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 https://artifacts.scality.net/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
-      - name: Compare files
-        run: cmp --silent upload_action.yaml ./name_action.yaml
-      - name: Compate files2
-        run: cmp --silent upload_action.yaml ./action.yaml
-
   test-upload-multiple-files:
     runs-on: ubuntu-latest
     name: A job that pushes a lot of files on artifacts
@@ -64,3 +38,34 @@ jobs:
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/big_file.txt > upload_big_file.txt
       - name: Compare files
         run: cmp --silent upload_big_file.txt ./big_file.txt
+
+  push-artifacts-action:
+    runs-on: ubuntu-latest
+    name: A job that push single files on artifacts
+    needs: [test-upload-big-file, test-upload-multiple-files]
+    steps:
+      - uses: actions/checkout@v1
+      - id: artifacts-upload
+        uses: ./
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: action.yaml README.md
+          method: upload
+      - name: Download file
+        run: curl -u  ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error  --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/README.md > upload_README.md
+      - name: Compare files
+        run: cmp --silent upload_README.md ./README.md
+      - name: Download file with artifacts-link
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
+      - name: Download with  artifacts-url and artifacts-name
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 https://artifacts.scality.net/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
+      - run: NUMBER_OF_FILES=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 https://artifacts.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/?format=text)
+      - name: Verify number of files
+        run: $([[ $NUMBER_OF_FILES -le 103 ]])
+      - name: Compare files
+        run: cmp --silent upload_action.yaml ./name_action.yaml
+      - name: Compate files2
+        run: cmp --silent upload_action.yaml ./action.yaml
+
