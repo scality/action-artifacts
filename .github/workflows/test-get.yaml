@@ -26,6 +26,31 @@ jobs:
             --max-time 3600 \
             https://artifacts.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
 
+  test-get-container:
+    needs:
+      - upload
+    runs-on: ubuntu-latest
+    container:
+      image: 'ubuntu:20.04'
+    steps:
+      - uses: actions/checkout@v2
+      - name: update
+        run: apt-get update
+      - run: apt-get install -y curl
+      - name: Artifacts Upload
+        id: artifacts-get
+        uses: ./
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          workflow-name: test-get
+          method: get
+      - name: Print the artifacts name
+        run: |
+          echo ${{ steps.artifacts-get.outputs.name }}
+          echo ${{ steps.artifacts-get.outputs.link }}
+
   test-get:
     needs:
       - upload
