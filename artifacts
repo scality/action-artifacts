@@ -84,6 +84,7 @@ upload() {
             args='-P 16'
     fi
 
+    echo "::notice:: Your artifacts has been uploaded here: ${LINK}"
     for i in ${SOURCE//, / }
     do
       OLDPWD=$PWD
