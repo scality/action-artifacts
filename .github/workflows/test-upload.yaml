@@ -23,8 +23,9 @@ jobs:
     name: A job that push a big file on artifacts
     strategy:
       matrix:
-        - run-1
-        - run-2
+        run:
+          - run-1
+          - run-2
     steps:
       - uses: actions/checkout@v1
       - run: mkdir artifacts
