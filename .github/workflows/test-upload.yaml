@@ -36,13 +36,13 @@ jobs:
       - name: create one big file
         run: dd if=/dev/random of=./artifacts-up/big_file2.txt count=5120 bs=1M
       - name: Push on big file
-        id: artifacts-up-upload
+        id: artifacts-upload
         uses: ./
         with:
           url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
-          source: ./big_file.txt
+          source: ./artifacts-up
           method: upload
       - name: Download file
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/big_file.txt > upload_big_file.txt
