@@ -28,16 +28,16 @@ jobs:
           - run-2
     steps:
       - uses: actions/checkout@v1
-      - run: mkdir artifacts
+      - run: mkdir artifacts-up
       - name: create one hundred files
-        run: mkdir -p test-files && for i in {1..100}; do echo $RANDOM > ./artifacts/$RANDOM.txt; done
+        run: mkdir -p test-files && for i in {1..100}; do echo $RANDOM > ./artifacts-up/$RANDOM.txt; done
       - name: create one big file
-        run: dd if=/dev/random of=./artifacts/big_file.txt count=5120 bs=1M
+        run: dd if=/dev/random of=./artifacts-up/big_file.txt count=5120 bs=1M
       - name: create one big file
-        run: dd if=/dev/random of=./artifacts/big_file2.txt count=5120 bs=1M
+        run: dd if=/dev/random of=./artifacts-up/big_file2.txt count=5120 bs=1M
       - name: Push on big file
-        id: artifacts-upload
-        uses: ./artifacts
+        id: artifacts-up-upload
+        uses: ./artifacts-up
         with:
           url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
