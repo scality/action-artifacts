@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v1
       - run: mkdir artifacts-up
       - name: create one hundred files
-        run: mkdir -p test-files && for i in {1..100}; do truncate -s 10M $RANDOM.txt; done
+        run: mkdir -p test-files && for i in {1..100}; do truncate -s 10M ./artifacts-up/$RANDOM.txt; done
       - name: create one big file
         run: dd if=/dev/random of=./artifacts-up/big_file.txt count=5120 bs=1M
       - name: create one big file
