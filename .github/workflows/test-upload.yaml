@@ -37,7 +37,7 @@ jobs:
         run: dd if=/dev/random of=./artifacts-up/big_file2.txt count=5120 bs=1M
       - name: Push on big file
         id: artifacts-up-upload
-        uses: ./artifacts-up
+        uses: ./
         with:
           url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
