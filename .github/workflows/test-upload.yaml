@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: create one big file
-        run: dd if=/dev/random of=big_file.txt count=1024 bs=1M
+        run: dd if=/dev/random of=big_file.txt count=10240 bs=1M
       - name: Push on big file
         id: artifacts-upload
         uses: ./
