@@ -19,7 +19,7 @@ jobs:
         ports:
         - 8080:8000
       artifacts:
-        image: "registry.scality.com/artifacts/artifacts:4.0.8"
+        image: "registry.scality.com/artifacts/artifacts:4.0.9"
         ports:
           - 8000:80
         env:

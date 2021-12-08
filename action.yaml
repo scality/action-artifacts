@@ -60,7 +60,6 @@ runs:
       id: properties
       run: |
         echo "::set-output name=repository::$(echo ${{ github.repository }} | sed 's/\//:/')"
-        echo "::set-output name=commit-timestamp::$(date --date='${{ github.event.head_commit.timestamp }}' +"%s")"
         echo "::set-output name=commit-short-revision::$(echo -n '${{ github.sha }}' | cut -c1-10)"
         echo "::set-output name=workflow-name::$(echo -n '${{ github.workflow }}' | sed 's/\W/-/g' | sed 's/^-//g')"
       shell: bash
@@ -71,7 +70,6 @@ runs:
         --user ${{ inputs.user }}
         --password ${{ inputs.password }}
         --repository ${{ steps.properties.outputs.repository }}
-        --commit-timestamp ${{ steps.properties.outputs.commit-timestamp }}
         --commit-short-revision ${{ steps.properties.outputs.commit-short-revision }}
         --workflow-name ${{ steps.properties.outputs.workflow-name }}
         --input-workflow-name "${{ inputs.workflow-name }}"
