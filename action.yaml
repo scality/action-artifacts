@@ -64,6 +64,13 @@ runs:
         echo "::set-output name=commit-short-revision::$(echo -n '${{ github.sha }}' | cut -c1-10)"
         echo "::set-output name=workflow-name::$(echo -n '${{ github.workflow }}' | sed 's/\W/-/g' | sed 's/^-//g')"
       shell: bash
+    - name: Get commit timestamp
+      id: timestamp
+      run: |
+        TIMESTAMP=$(git show -s --format=%ct)
+        echo "::set-output name=commit-timestamp::$TIMESTAMP"
+      working-directory: ${{ github.workspace }}
+      shell: bash
     - name: Launch artifacts commmand
       id: artifacts
       run: >
@@ -71,7 +78,7 @@ runs:
         --user ${{ inputs.user }}
         --password ${{ inputs.password }}
         --repository ${{ steps.properties.outputs.repository }}
-        --commit-timestamp ${{ steps.properties.outputs.commit-timestamp }}
+        --commit-timestamp ${{ steps.timestamp.outputs.commit-timestamp }}
         --commit-short-revision ${{ steps.properties.outputs.commit-short-revision }}
         --workflow-name ${{ steps.properties.outputs.workflow-name }}
         --input-workflow-name "${{ inputs.workflow-name }}"

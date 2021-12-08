@@ -33,10 +33,10 @@ jobs:
     container:
       image: 'ubuntu:20.04'
     steps:
-      - uses: actions/checkout@v2
       - name: update
         run: apt-get update
-      - run: apt-get install -y curl
+      - run: apt-get install -y curl git
+      - uses: actions/checkout@v2
       - name: Artifacts Upload
         id: artifacts-get
         uses: ./
