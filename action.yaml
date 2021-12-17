@@ -54,29 +54,5 @@ outputs:
       The full url in which artifacts will be stored.
     value: ${{ steps.artifacts.outputs.link }}
 runs:
-  using: "composite"
-  steps:
-    - name: Setup new properties for artifacts name
-      id: properties
-      run: |
-        echo "::set-output name=repository::$(echo ${{ github.repository }} | sed 's/\//:/')"
-        echo "::set-output name=commit-short-revision::$(echo -n '${{ github.sha }}' | cut -c1-10)"
-        echo "::set-output name=workflow-name::$(echo -n '${{ github.workflow }}' | sed 's/\W/-/g' | sed 's/^-//g')"
-      shell: bash
-    - name: Launch artifacts commmand
-      id: artifacts
-      run: >
-        ${GITHUB_ACTION_PATH}/artifacts --url ${{ inputs.url }}
-        --user ${{ inputs.user }}
-        --password ${{ inputs.password }}
-        --repository ${{ steps.properties.outputs.repository }}
-        --commit-short-revision ${{ steps.properties.outputs.commit-short-revision }}
-        --workflow-name ${{ steps.properties.outputs.workflow-name }}
-        --input-workflow-name "${{ inputs.workflow-name }}"
-        --run-number ${{ github.run_number }}
-        --run-attempt ${{ github.run_attempt }}
-        --name "${{ inputs.name }}"
-        --tag "${{ inputs.tag }}"
-        --source "${{ inputs.source }}"
-        --${{ inputs.method }}
-      shell: bash
+  using: 'node12'
+  main: 'dist/index.js'
