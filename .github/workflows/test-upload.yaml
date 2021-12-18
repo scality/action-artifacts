@@ -1,6 +1,6 @@
 on:
-  # Temporarily deactivating while method is not implemented
   workflow_dispatch:
+  push:
 
 name: test-upload
 
@@ -54,8 +54,15 @@ jobs:
           url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
-          source: action.yaml README.md
+          source: action.yaml
           method: upload
+      - uses: ./
+        with:
+          method: upload
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: README.md
       - name: Download file
         run: curl -u  ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error  --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/README.md > upload_README.md
       - name: Compare files
