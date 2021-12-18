@@ -5,6 +5,33 @@ on: push
 jobs:
   build: # make sure build/ci work properly
     runs-on: ubuntu-latest
+    env:
+      INPUT_URL: http://localhost:8080
+      INPUT_USER: ${{ secrets.ARTIFACTS_USER }}
+      INPUT_PASSWORD: ${{ secrets.ARTIFACTS_PASSWORD }}
+    services:
+      cloudserver-front:
+        image: "zenko/cloudserver:8.1.2"
+        env:
+          REMOTE_MANAGEMENT_DISABLE: 1
+          LOG_LEVEL: debug
+          ENDPOINT: "cloudserver-front"
+          CI: false
+        ports:
+        - 8000:8000
+      artifacts:
+        image: "registry.scality.com/artifacts/artifacts:4.0.9"
+        ports:
+          - 8080:80
+        env:
+          AWS_SECRET_ACCESS_KEY: verySecretKey1
+          AWS_ACCESS_KEY_ID: accessKey1
+          AWS_BUCKET_PREFIX: artifacts
+          ENDPOINT_URL: http://cloudserver-front:8000
+          AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
+          GITHUB_API_COMPANY: scality
+          GITHUB_API_ENABLED: true
+          GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
     steps:
       - uses: actions/checkout@v2
       - run: |

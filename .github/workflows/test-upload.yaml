@@ -1,6 +1,6 @@
 on:
   # Temporarily deactivating while method is not implemented
-  workflow_dispatch:
+  push:
 
 name: test-upload
 
