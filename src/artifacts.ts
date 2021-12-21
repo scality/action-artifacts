@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as process from 'process'
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
+import axiosRetry from 'axios-retry'
 import fs from 'fs'
 
 export async function artifactsName(): Promise<string> {
@@ -33,7 +34,8 @@ export async function fileUpload(
   url: string,
   username: string,
   password: string,
-  file: string
+  file: string,
+  retries = 3
 ): Promise<AxiosResponse> {
   const fileStream: fs.ReadStream = fs.createReadStream(file)
   const request_config: AxiosRequestConfig = {
@@ -44,6 +46,9 @@ export async function fileUpload(
     maxBodyLength: Infinity,
     maxContentLength: Infinity
   }
+  axiosRetry(axios, {
+    retries
+  })
 
   return axios.put(url, fileStream, request_config)
 }
