@@ -2,8 +2,7 @@
 name: test-promote
 
 on:
-  # Temporarily deactivating while method is not implemented
-  workflow_dispatch:
+  - push
 
 jobs:
   test-promote:
@@ -79,4 +78,19 @@ jobs:
         run: |
           echo ${{ steps.artifacts-promote.outputs.name }}
           echo ${{ steps.artifacts-promote.outputs.link }}
-
+      - name: Tag the repo
+        run: git tag 1.0.1
+      - name: Artifacts Promote
+        id: artifacts-promote-2
+        uses: ./
+        with:
+          url: ${{ env.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          name: ${{ steps.artifacts-promote.outputs.name }}
+          tag: '1.0.1'
+          method: promote
+      - name: Print the artifacts name
+        run: |
+          echo ${{ steps.artifacts-promote-2.outputs.name }}
+          echo ${{ steps.artifacts-promote-2.outputs.link }}
