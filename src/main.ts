@@ -3,6 +3,7 @@ import * as glob from '@actions/glob'
 import * as path from 'path'
 import * as process from 'process'
 import {artifactsName, fileUpload, setNotice, setOutputs} from './artifacts'
+import {AxiosResponse} from 'axios'
 import fs from 'fs'
 
 async function setup(): Promise<void> {
@@ -19,6 +20,7 @@ async function upload(): Promise<void> {
   const password: string = core.getInput('password')
   const workspace: string = process.env['GITHUB_WORKSPACE'] || ''
   const source: string = path.join(workspace, core.getInput('source'))
+  const requests: Promise<AxiosResponse>[] = []
   let dirname: string
 
   if (fs.statSync(source).isFile()) {
@@ -33,7 +35,6 @@ async function upload(): Promise<void> {
     matchDirectories: false
   }
   const globber = await glob.create(source, globOptions)
-
   for await (const file of globber.globGenerator()) {
     try {
       core.info(`Uploading file: ${file}`)
@@ -42,13 +43,20 @@ async function upload(): Promise<void> {
         path.join('/upload/', name, artifactsPath),
         url
       ).toString()
-
-      await fileUpload(uploadUrl, user, password, file)
+      const response: Promise<AxiosResponse> = fileUpload(
+        uploadUrl,
+        user,
+        password,
+        file
+      )
+      requests.push(response)
     } catch (error) {
       throw error
     }
-    core.info(`${file} has been uploaded`)
   }
+  core.info('Waiting for all requests to finish')
+  await Promise.all(requests)
+  core.info('All requests are done')
   await setOutputs(name, url)
   await setNotice(name, url)
 }

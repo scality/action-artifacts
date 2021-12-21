@@ -45,5 +45,5 @@ export async function fileUpload(
     maxContentLength: Infinity
   }
 
-  return await axios.put(url, fileStream, request_config)
+  return axios.put(url, fileStream, request_config)
 }
