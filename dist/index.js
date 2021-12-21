@@ -83,7 +83,7 @@ function fileUpload(url, username, password, file) {
             maxBodyLength: Infinity,
             maxContentLength: Infinity
         };
-        return yield axios_1.default.put(url, fileStream, request_config);
+        return axios_1.default.put(url, fileStream, request_config);
     });
 }
 exports.fileUpload = fileUpload;
@@ -157,6 +157,7 @@ function upload() {
         const password = core.getInput('password');
         const workspace = process.env['GITHUB_WORKSPACE'] || '';
         const source = path.join(workspace, core.getInput('source'));
+        const requests = [];
         let dirname;
         if (fs_1.default.statSync(source).isFile()) {
             dirname = path.dirname(source);
@@ -177,12 +178,12 @@ function upload() {
                     core.info(`Uploading file: ${file}`);
                     const artifactsPath = file.replace(dirname, '');
                     const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), url).toString();
-                    yield (0, artifacts_1.fileUpload)(uploadUrl, user, password, file);
+                    const response = (0, artifacts_1.fileUpload)(uploadUrl, user, password, file);
+                    requests.push(response);
                 }
                 catch (error) {
                     throw error;
                 }
-                core.info(`${file} has been uploaded`);
             }
         }
         catch (e_1_1) { e_1 = { error: e_1_1 }; }
@@ -192,6 +193,9 @@ function upload() {
             }
             finally { if (e_1) throw e_1.error; }
         }
+        core.info('Waiting for all requests to finish');
+        yield Promise.all(requests);
+        core.info('All requests are done');
         yield (0, artifacts_1.setOutputs)(name, url);
         yield (0, artifacts_1.setNotice)(name, url);
     });
