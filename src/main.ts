@@ -3,7 +3,7 @@ import * as glob from '@actions/glob'
 import * as path from 'path'
 import * as process from 'process'
 import {artifactsName, fileUpload, setNotice, setOutputs} from './artifacts'
-import {AxiosResponse} from 'axios'
+import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
 import fs from 'fs'
 
 async function setup(): Promise<void> {
@@ -11,6 +11,44 @@ async function setup(): Promise<void> {
   const url: string = core.getInput('url')
 
   await setOutputs(name, url)
+}
+
+async function prolong(): Promise<void> {
+  const user: string = core.getInput('user')
+  const password: string = core.getInput('password')
+  const url: string = core.getInput('url')
+  const name: string = core.getInput('name')
+
+  const name_regex = new RegExp(
+    '(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+.[0-9]+)$'
+  )
+  const match = name.match(name_regex)
+  if (match == null) {
+    throw Error('The name is not one of Scality actions artifacts')
+  }
+  const artifacts_target = `${match[1]}prolonged${match[2]}`
+
+  const final_url: string = new URL(
+    path.join('/copy/', name, artifacts_target),
+    url
+  )
+    .toString()
+    .concat('/')
+  const request_config: AxiosRequestConfig = {
+    auth: {
+      username: user,
+      password
+    },
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity
+  }
+  core.info(`copying '${name} to '${artifacts_target}`)
+  const response = await axios.get(final_url, request_config)
+  if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
+    throw Error(`Build not copied, ${response.status}: ${response.data}`)
+  }
+  await setOutputs(name, artifacts_target)
+  await setOutputs(url, artifacts_target)
 }
 
 async function upload(): Promise<void> {
@@ -71,6 +109,8 @@ async function run(): Promise<void> {
       await setup()
     } else if (method === 'upload') {
       await upload()
+    } else if (method === 'prolong') {
+      await prolong()
     } else {
       throw new Error(`Method ${method} does not exist`)
     }

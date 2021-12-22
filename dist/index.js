@@ -144,12 +144,45 @@ const glob = __importStar(__nccwpck_require__(8090));
 const path = __importStar(__nccwpck_require__(5622));
 const process = __importStar(__nccwpck_require__(1765));
 const artifacts_1 = __nccwpck_require__(5671);
+const axios_1 = __importDefault(__nccwpck_require__(6545));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
 function setup() {
     return __awaiter(this, void 0, void 0, function* () {
         const name = yield (0, artifacts_1.artifactsName)();
         const url = core.getInput('url');
         yield (0, artifacts_1.setOutputs)(name, url);
+    });
+}
+function prolong() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const user = core.getInput('user');
+        const password = core.getInput('password');
+        const url = core.getInput('url');
+        const name = core.getInput('name');
+        const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+.[0-9]+)$');
+        const match = name.match(name_regex);
+        if (match == null) {
+            throw Error('The name is not one of Scality actions artifacts');
+        }
+        const artifacts_target = `${match[1]}prolonged${match[2]}`;
+        const final_url = new URL(path.join('/copy/', name, artifacts_target), url)
+            .toString()
+            .concat('/');
+        const request_config = {
+            auth: {
+                username: user,
+                password
+            },
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity
+        };
+        core.info(`copying '${name} to '${artifacts_target}`);
+        const response = yield axios_1.default.get(final_url, request_config);
+        if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
+            throw Error(`Build not copied, ${response.status}: ${response.data}`);
+        }
+        yield (0, artifacts_1.setOutputs)(name, artifacts_target);
+        yield (0, artifacts_1.setOutputs)(url, artifacts_target);
     });
 }
 function upload() {
@@ -214,6 +247,9 @@ function run() {
             }
             else if (method === 'upload') {
                 yield upload();
+            }
+            else if (method === 'prolong') {
+                yield prolong();
             }
             else {
                 throw new Error(`Method ${method} does not exist`);

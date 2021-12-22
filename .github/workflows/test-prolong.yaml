@@ -2,8 +2,7 @@
 name: test-prolong
 
 on:
-  # Temporarily deactivating while method is not implemented
-  workflow_dispatch:
+  - push
 
 jobs:
   test-prolong:
