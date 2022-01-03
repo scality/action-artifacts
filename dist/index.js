@@ -244,6 +244,28 @@ function prolong() {
         yield (0, artifacts_1.setOutputs)(url, artifacts_target);
     });
 }
+function upload_one_file(nb_try, file, dirname, name, url, user, password) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        if (nb_try === 0) {
+            throw Error(`Number of retry retched for  ${file}`);
+        }
+        try {
+            core.info(`Uploading file: ${file}`);
+            const artifactsPath = file.replace(dirname, '');
+            const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), url).toString();
+            return (0, artifacts_1.fileUpload)(uploadUrl, user, password, file);
+        }
+        catch (error) {
+            if (axios_1.default.isAxiosError(error) &&
+                ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 400) {
+                core.info('Error 400 retry uploading');
+                return upload_one_file(nb_try - 1, file, dirname, name, url, user, password);
+            }
+            throw error;
+        }
+    });
+}
 function upload() {
     var e_1, _a;
     return __awaiter(this, void 0, void 0, function* () {
@@ -270,16 +292,7 @@ function upload() {
         try {
             for (var _b = __asyncValues(globber.globGenerator()), _c; _c = yield _b.next(), !_c.done;) {
                 const file = _c.value;
-                try {
-                    core.info(`Uploading file: ${file}`);
-                    const artifactsPath = file.replace(dirname, '');
-                    const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), url).toString();
-                    const response = (0, artifacts_1.fileUpload)(uploadUrl, user, password, file);
-                    requests.push(response);
-                }
-                catch (error) {
-                    throw error;
-                }
+                requests.push(upload_one_file(4, file, dirname, name, url, user, password));
             }
         }
         catch (e_1_1) { e_1 = { error: e_1_1 }; }

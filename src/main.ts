@@ -4,7 +4,7 @@ import * as glob from '@actions/glob'
 import * as path from 'path'
 import * as process from 'process'
 import {artifactsName, fileUpload, setNotice, setOutputs} from './artifacts'
-import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
+import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios'
 import fs from 'fs'
 
 async function setup(): Promise<void> {
@@ -122,6 +122,46 @@ async function prolong(): Promise<void> {
   await setOutputs(url, artifacts_target)
 }
 
+async function upload_one_file(
+  nb_try: number,
+  file: string,
+  dirname: string,
+  name: string,
+  url: string,
+  user: string,
+  password: string
+): Promise<AxiosResponse> {
+  if (nb_try === 0) {
+    throw Error(`Number of retry retched for  ${file}`)
+  }
+  try {
+    core.info(`Uploading file: ${file}`)
+    const artifactsPath: string = file.replace(dirname, '')
+    const uploadUrl: string = new URL(
+      path.join('/upload/', name, artifactsPath),
+      url
+    ).toString()
+    return fileUpload(uploadUrl, user, password, file)
+  } catch (error: unknown) {
+    if (
+      axios.isAxiosError(error) &&
+      (error as AxiosError<unknown, unknown>).response?.status === 400
+    ) {
+      core.info('Error 400 retry uploading')
+      return upload_one_file(
+        nb_try - 1,
+        file,
+        dirname,
+        name,
+        url,
+        user,
+        password
+      )
+    }
+    throw error
+  }
+}
+
 async function upload(): Promise<void> {
   const name: string = await artifactsName()
   const user: string = core.getInput('user')
@@ -145,23 +185,7 @@ async function upload(): Promise<void> {
   }
   const globber = await glob.create(source, globOptions)
   for await (const file of globber.globGenerator()) {
-    try {
-      core.info(`Uploading file: ${file}`)
-      const artifactsPath: string = file.replace(dirname, '')
-      const uploadUrl: string = new URL(
-        path.join('/upload/', name, artifactsPath),
-        url
-      ).toString()
-      const response: Promise<AxiosResponse> = fileUpload(
-        uploadUrl,
-        user,
-        password,
-        file
-      )
-      requests.push(response)
-    } catch (error) {
-      throw error
-    }
+    requests.push(upload_one_file(4, file, dirname, name, url, user, password))
   }
   core.info('Waiting for all requests to finish')
   await Promise.all(requests)
