@@ -95,7 +95,180 @@ exports.fileUpload = fileUpload;
 
 /***/ }),
 
+/***/ 5105:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Methods = exports.Inputs = void 0;
+var Inputs;
+(function (Inputs) {
+    Inputs["User"] = "user";
+    Inputs["Password"] = "password";
+    Inputs["Url"] = "url";
+    Inputs["Method"] = "method";
+    Inputs["Tag"] = "tag";
+    Inputs["Source"] = "source";
+    Inputs["Workflow_name"] = "workflow-name";
+})(Inputs = exports.Inputs || (exports.Inputs = {}));
+var Methods;
+(function (Methods) {
+    Methods["Setup"] = "setup";
+    Methods["Upload"] = "upload";
+    Methods["Prolong"] = "prolong";
+    Methods["Promote"] = "promote";
+    Methods["Get"] = "get";
+})(Methods = exports.Methods || (exports.Methods = {}));
+
+
+/***/ }),
+
+/***/ 910:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getInputs = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const path = __importStar(__nccwpck_require__(5622));
+const constants_1 = __nccwpck_require__(5105);
+const methods_1 = __nccwpck_require__(4453);
+const process_1 = __importDefault(__nccwpck_require__(1765));
+/**
+ * Helper to get all the inputs for the action
+ */
+function getInputs() {
+    const method_type = core.getInput(constants_1.Inputs.Method, { required: true });
+    let method = null;
+    let password = '';
+    let user = '';
+    let source = '';
+    let tag = '';
+    let workflow_name = '';
+    const url = core.getInput(constants_1.Inputs.Url, { required: true });
+    if (method !== constants_1.Methods.Setup) {
+        password = core.getInput(constants_1.Inputs.Password, { required: true });
+        user = core.getInput(constants_1.Inputs.User, { required: true });
+    }
+    if (method_type === constants_1.Methods.Upload) {
+        const workspace = process_1.default.env['GITHUB_WORKSPACE'] || '';
+        source = path.join(workspace, core.getInput(constants_1.Inputs.Source, { required: true }));
+        method = methods_1.upload;
+    }
+    else if (method_type === constants_1.Methods.Prolong) {
+        workflow_name = core.getInput(constants_1.Inputs.Workflow_name, { required: true });
+        method = methods_1.prolong;
+    }
+    else if (method_type === constants_1.Methods.Promote) {
+        workflow_name = core.getInput(constants_1.Inputs.Workflow_name, { required: true });
+        tag = core.getInput(constants_1.Inputs.Tag, { required: true });
+        method = methods_1.promote;
+    }
+    else if (method_type === constants_1.Methods.Get) {
+        workflow_name = core.getInput(constants_1.Inputs.Workflow_name, { required: true });
+        throw new Error(`Method ${method} does not exist`);
+    }
+    else if (method_type === constants_1.Methods.Setup) {
+        method = methods_1.setup;
+    }
+    else {
+        throw new Error(`Method ${method} does not exist`);
+    }
+    return {
+        user,
+        password,
+        url,
+        source,
+        tag,
+        method,
+        method_type,
+        workflow_name
+    };
+}
+exports.getInputs = getInputs;
+
+
+/***/ }),
+
 /***/ 3109:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(2186));
+const inputs_artifacts_1 = __nccwpck_require__(910);
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const inputs = (0, inputs_artifacts_1.getInputs)();
+            core.info(`Method ${inputs.method_type} has been selected`);
+            inputs.method(inputs);
+        }
+        catch (error) {
+            if (error instanceof Error)
+                core.setFailed(error.message);
+        }
+    });
+}
+run();
+
+
+/***/ }),
+
+/***/ 4453:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -139,22 +312,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.upload = exports.prolong = exports.promote = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const glob = __importStar(__nccwpck_require__(8090));
 const path = __importStar(__nccwpck_require__(5622));
-const process = __importStar(__nccwpck_require__(1765));
 const artifacts_1 = __nccwpck_require__(5671);
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
-function setup() {
+function setup(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const name = yield (0, artifacts_1.artifactsName)();
-        const url = core.getInput('url');
-        yield (0, artifacts_1.setOutputs)(name, url);
+        yield (0, artifacts_1.setOutputs)(name, inputs.url);
     });
 }
-function promote() {
+exports.setup = setup;
+function promote(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         let myOutput = '';
         const options = {};
@@ -163,15 +336,10 @@ function promote() {
                 myOutput += data.toString();
             }
         };
-        const user = core.getInput('user');
-        const password = core.getInput('password');
-        const url = core.getInput('url');
-        const name = core.getInput('name');
-        const tag = core.getInput('tag');
         const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+.[0-9]+$');
         const promoted_regex = new RegExp('(^[^/]+:)promoted-([^/]+)$');
-        const staging_match = name.match(staging_regex);
-        const promoted_match = name.match(promoted_regex);
+        const staging_match = inputs.workflow_name.match(staging_regex);
+        const promoted_match = inputs.workflow_name.match(promoted_regex);
         let artifacts_commit = '';
         let artifacts_prefix = '';
         if (staging_match !== null) {
@@ -189,17 +357,17 @@ function promote() {
             throw Error("This artifacts doesn't match Scality's artifacts naming standards");
         }
         myOutput = '';
-        yield exec.exec('git', ['rev-list', '-n', '1', tag], options);
+        yield exec.exec('git', ['rev-list', '-n', '1', inputs.tag], options);
         if (!myOutput.includes(artifacts_commit))
             throw Error(`Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`);
-        const promoted_name = `${artifacts_prefix}promoted-${tag}`;
-        const final_url = new URL(path.join('/copy/', name, promoted_name), url)
+        const promoted_name = `${artifacts_prefix}promoted-${inputs.tag}`;
+        const final_url = new URL(path.join('/copy/', inputs.workflow_name, promoted_name), inputs.url)
             .toString()
             .concat('/');
         const request_config = {
             auth: {
-                username: user,
-                password
+                username: inputs.user,
+                password: inputs.password
             },
             maxBodyLength: Infinity,
             maxContentLength: Infinity
@@ -208,43 +376,41 @@ function promote() {
         if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
             throw Error(`Build not copied, ${response.status}: ${response.data}`);
         }
-        yield (0, artifacts_1.setOutputs)(promoted_name, url);
-        yield (0, artifacts_1.setNotice)(promoted_name, url);
+        yield (0, artifacts_1.setOutputs)(promoted_name, inputs.url);
+        yield (0, artifacts_1.setNotice)(promoted_name, inputs.url);
     });
 }
-function prolong() {
+exports.promote = promote;
+function prolong(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        const user = core.getInput('user');
-        const password = core.getInput('password');
-        const url = core.getInput('url');
-        const name = core.getInput('name');
         const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+.[0-9]+)$');
-        const match = name.match(name_regex);
+        const match = inputs.workflow_name.match(name_regex);
         if (match == null) {
             throw Error('The name is not one of Scality actions artifacts');
         }
         const artifacts_target = `${match[1]}prolonged${match[2]}`;
-        const final_url = new URL(path.join('/copy/', name, artifacts_target), url)
+        const final_url = new URL(path.join('/copy/', inputs.workflow_name, artifacts_target), inputs.url)
             .toString()
             .concat('/');
         const request_config = {
             auth: {
-                username: user,
-                password
+                username: inputs.user,
+                password: inputs.password
             },
             maxBodyLength: Infinity,
             maxContentLength: Infinity
         };
-        core.info(`copying '${name} to '${artifacts_target}`);
+        core.info(`copying '${inputs.workflow_name} to '${artifacts_target}`);
         const response = yield axios_1.default.get(final_url, request_config);
         if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
             throw Error(`Build not copied, ${response.status}: ${response.data}`);
         }
-        yield (0, artifacts_1.setOutputs)(name, artifacts_target);
-        yield (0, artifacts_1.setOutputs)(url, artifacts_target);
+        yield (0, artifacts_1.setOutputs)(inputs.workflow_name, artifacts_target);
+        yield (0, artifacts_1.setOutputs)(inputs.url, artifacts_target);
     });
 }
-function upload_one_file(nb_try, file, dirname, name, url, user, password) {
+exports.prolong = prolong;
+function upload_one_file(nb_try, file, dirname, name, inputs) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         if (nb_try === 0) {
@@ -253,46 +419,41 @@ function upload_one_file(nb_try, file, dirname, name, url, user, password) {
         try {
             core.info(`Uploading file: ${file}`);
             const artifactsPath = file.replace(dirname, '');
-            const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), url).toString();
-            return (0, artifacts_1.fileUpload)(uploadUrl, user, password, file);
+            const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), inputs.url).toString();
+            return (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
         }
         catch (error) {
             if (axios_1.default.isAxiosError(error) &&
                 ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 400) {
                 core.info('Error 400 retry uploading');
-                return upload_one_file(nb_try - 1, file, dirname, name, url, user, password);
+                return upload_one_file(nb_try - 1, file, dirname, name, inputs);
             }
             throw error;
         }
     });
 }
-function upload() {
+function upload(inputs) {
     var e_1, _a;
     return __awaiter(this, void 0, void 0, function* () {
         const name = yield (0, artifacts_1.artifactsName)();
-        const user = core.getInput('user');
-        const url = core.getInput('url');
-        const password = core.getInput('password');
-        const workspace = process.env['GITHUB_WORKSPACE'] || '';
-        const source = path.join(workspace, core.getInput('source'));
         const requests = [];
         let dirname;
-        if (fs_1.default.statSync(source).isFile()) {
-            dirname = path.dirname(source);
+        if (fs_1.default.statSync(inputs.source).isFile()) {
+            dirname = path.dirname(inputs.source);
         }
         else {
-            dirname = source;
+            dirname = inputs.source;
         }
-        core.debug(`source: ${source}`);
+        core.debug(`source: ${inputs.source}`);
         core.debug(`dirname: ${dirname}`);
         const globOptions = {
             matchDirectories: false
         };
-        const globber = yield glob.create(source, globOptions);
+        const globber = yield glob.create(inputs.source, globOptions);
         try {
             for (var _b = __asyncValues(globber.globGenerator()), _c; _c = yield _b.next(), !_c.done;) {
                 const file = _c.value;
-                requests.push(upload_one_file(4, file, dirname, name, url, user, password));
+                requests.push(upload_one_file(4, file, dirname, name, inputs));
             }
         }
         catch (e_1_1) { e_1 = { error: e_1_1 }; }
@@ -305,38 +466,11 @@ function upload() {
         core.info('Waiting for all requests to finish');
         yield Promise.all(requests);
         core.info('All requests are done');
-        yield (0, artifacts_1.setOutputs)(name, url);
-        yield (0, artifacts_1.setNotice)(name, url);
+        yield (0, artifacts_1.setOutputs)(name, inputs.url);
+        yield (0, artifacts_1.setNotice)(name, inputs.url);
     });
 }
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const method = core.getInput('method');
-            core.info(`Method ${method} has been selected`);
-            if (method === 'setup') {
-                yield setup();
-            }
-            else if (method === 'upload') {
-                yield upload();
-            }
-            else if (method === 'prolong') {
-                yield prolong();
-            }
-            else if (method === 'promote') {
-                yield promote();
-            }
-            else {
-                throw new Error(`Method ${method} does not exist`);
-            }
-        }
-        catch (error) {
-            if (error instanceof Error)
-                core.setFailed(error.message);
-        }
-    });
-}
-run();
+exports.upload = upload;
 
 
 /***/ }),
