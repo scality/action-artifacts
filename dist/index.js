@@ -176,7 +176,13 @@ function getInputs() {
     }
     if (method_type === constants_1.Methods.Upload) {
         const workspace = process_1.default.env['GITHUB_WORKSPACE'] || '';
-        source = path.join(workspace, core.getInput(constants_1.Inputs.Source, { required: true }));
+        const input_source = core.getInput(constants_1.Inputs.Source, { required: true });
+        if (path.isAbsolute(input_source)) {
+            source = input_source;
+        }
+        else {
+            source = path.join(workspace, input_source);
+        }
         method = methods_1.upload;
     }
     else if (method_type === constants_1.Methods.Prolong) {

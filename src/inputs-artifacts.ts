@@ -27,10 +27,15 @@ export function getInputs(): InputsArtifacts {
 
   if (method_type === Methods.Upload) {
     const workspace = process.env['GITHUB_WORKSPACE'] || ''
-    source = path.join(
-      workspace,
-      core.getInput(Inputs.Source, {required: true})
-    )
+    const input_source: string = core.getInput(Inputs.Source, {required: true})
+    if (path.isAbsolute(input_source)) {
+      source = input_source
+    } else {
+      source = path.join(
+        workspace,
+        input_source
+      )
+    }
     method = upload
   } else if (method_type === Methods.Prolong) {
     workflow_name = core.getInput(Inputs.Workflow_name, {required: true})
