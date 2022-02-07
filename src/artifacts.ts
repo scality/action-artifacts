@@ -44,7 +44,13 @@ export async function fileUpload(
       password
     },
     maxBodyLength: Infinity,
-    maxContentLength: Infinity
+    maxContentLength: Infinity,
+    // Workaround regarding Axios memory consuption when
+    // uploading large files.
+    // To be reverted once the library has provided a better
+    // solution
+    // https://github.com/axios/axios/issues/4423
+    maxRedirects: 0
   }
   axiosRetry(axios, {
     retries

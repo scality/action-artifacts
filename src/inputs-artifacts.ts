@@ -31,10 +31,7 @@ export function getInputs(): InputsArtifacts {
     if (path.isAbsolute(input_source)) {
       source = input_source
     } else {
-      source = path.join(
-        workspace,
-        input_source
-      )
+      source = path.join(workspace, input_source)
     }
     method = upload
   } else if (method_type === Methods.Prolong) {

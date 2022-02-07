@@ -1,0 +1,41 @@
+
+concurrency:
+  group: 'load-tests-${{ github.ref }}'
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - development/**
+
+name: test-load
+
+jobs:
+  load-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+        - host: ubuntu-latest
+          name: github-hosted
+        - host: [self-hosted, focal, large]
+          name: self-hosted
+    runs-on: ${{ matrix.test.host }}
+    name: load tests on ${{ matrix.test.name }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: create multiple files
+        run: |
+          mkdir -p artifacts/${{ matrix.test.name }}
+          for i in {1..20}; do
+            head -c 1G /dev/urandom > artifacts/${{ matrix.test.name }}/$i.txt
+          done
+      - name: Push all files
+        uses: ./
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./artifacts
+          method: upload
