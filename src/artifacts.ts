@@ -56,5 +56,5 @@ export async function fileUpload(
     retries
   })
 
-  return axios.put(url, fileStream, request_config)
+  return await axios.put(url, fileStream, request_config)
 }
