@@ -5,6 +5,7 @@ import * as path from 'path'
 import {artifactsName, fileUpload, setNotice, setOutputs} from './artifacts'
 import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
+import async from 'async'
 import fs from 'fs'
 
 export async function setup(inputs: InputsArtifacts): Promise<void> {
@@ -127,14 +128,14 @@ async function upload_one_file(
       path.join('/upload/', name, artifactsPath),
       inputs.url
     ).toString()
-    return fileUpload(uploadUrl, inputs.user, inputs.password, file)
+    return await fileUpload(uploadUrl, inputs.user, inputs.password, file)
   } catch (error: unknown) {
     if (
       axios.isAxiosError(error) &&
       (error as AxiosError<unknown, unknown>).response?.status === 400
     ) {
       core.info('Error 400 retry uploading')
-      return upload_one_file(nb_try - 1, file, dirname, name, inputs)
+      return await upload_one_file(nb_try - 1, file, dirname, name, inputs)
     }
     throw error
   }
@@ -142,8 +143,8 @@ async function upload_one_file(
 
 export async function upload(inputs: InputsArtifacts): Promise<void> {
   const name: string = await artifactsName()
-  const requests: Promise<AxiosResponse>[] = []
   let dirname: string
+  const requests = []
 
   if (fs.statSync(inputs.source).isFile()) {
     dirname = path.dirname(inputs.source)
@@ -158,11 +159,18 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
   }
   const globber = await glob.create(inputs.source, globOptions)
   for await (const file of globber.globGenerator()) {
-    requests.push(upload_one_file(4, file, dirname, name, inputs))
+    requests.push(file)
   }
+
   core.info('Waiting for all requests to finish')
-  await Promise.all(requests)
-  core.info('All requests are done')
+
+  await async.eachLimit(requests, 16, (async (file: string, next) => {
+    await upload_one_file(4, file, dirname, name, inputs)
+    next()
+  }))
+
+  core.info('All files are uploaded ')
+
   await setOutputs(name, inputs.url)
   await setNotice(name, inputs.url)
 }

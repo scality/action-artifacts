@@ -5,7 +5,7 @@ export interface InputsArtifacts {
   user: string
   password: string
   url: string
-  method: (x: InputsArtifacts) => void
+  method: (x: InputsArtifacts) => Promise<void>
   method_type: string
   tag: string
   source: string
