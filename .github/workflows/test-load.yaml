@@ -19,8 +19,8 @@ jobs:
         test:
         - host: ubuntu-latest
           name: github-hosted
-        - host: [self-hosted, focal, large]
-          name: self-hosted
+        # - host: [self-hosted, focal, large]
+        #   name: self-hosted
     runs-on: ${{ matrix.test.host }}
     name: load tests on ${{ matrix.test.name }}
     steps:
@@ -34,7 +34,7 @@ jobs:
       - name: Push all files
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: https://artifacts-devl.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./artifacts
