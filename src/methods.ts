@@ -122,20 +122,19 @@ async function upload_one_file(
     throw Error(`Number of retry retched for  ${file}`)
   }
   try {
-    core.info(`Uploading file: ${file}`)
     const artifactsPath: string = file.replace(dirname, '')
     const uploadUrl: string = new URL(
       path.join('/upload/', name, artifactsPath),
       inputs.url
     ).toString()
-    return await fileUpload(uploadUrl, inputs.user, inputs.password, file)
+    return fileUpload(uploadUrl, inputs.user, inputs.password, file)
   } catch (error: unknown) {
     if (
       axios.isAxiosError(error) &&
       (error as AxiosError<unknown, unknown>).response?.status === 400
     ) {
       core.info('Error 400 retry uploading')
-      return await upload_one_file(nb_try - 1, file, dirname, name, inputs)
+      return upload_one_file(nb_try - 1, file, dirname, name, inputs)
     }
     throw error
   }
@@ -162,11 +161,11 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     requests.push(file)
   }
 
-  core.info('Waiting for all requests to finish')
-
   await async.eachLimit(requests, 16, (async (file: string, next) => {
+    core.info(`Uploading file: ${file}`)
     await upload_one_file(4, file, dirname, name, inputs)
     next()
+    core.info(`${file} has been uploaded`)
   }))
 
   core.info('All files are uploaded ')

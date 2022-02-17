@@ -93,7 +93,7 @@ function fileUpload(url, username, password, file, retries = 3) {
         (0, axios_retry_1.default)(axios_1.default, {
             retries
         });
-        return yield axios_1.default.put(url, fileStream, request_config);
+        return axios_1.default.put(url, fileStream, request_config);
     });
 }
 exports.fileUpload = fileUpload;
@@ -250,19 +250,30 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const inputs_artifacts_1 = __nccwpck_require__(910);
 function run() {
-    try {
-        const inputs = (0, inputs_artifacts_1.getInputs)();
-        core.info(`Method ${inputs.method_type} has been selected`);
-        inputs.method(inputs);
-    }
-    catch (error) {
-        if (error instanceof Error)
-            core.setFailed(error.message);
-    }
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const inputs = (0, inputs_artifacts_1.getInputs)();
+            core.info(`Method ${inputs.method_type} has been selected`);
+            inputs.method(inputs);
+        }
+        catch (error) {
+            if (error instanceof Error)
+                core.setFailed(error.message);
+        }
+    });
 }
 run();
 
@@ -419,16 +430,15 @@ function upload_one_file(nb_try, file, dirname, name, inputs) {
             throw Error(`Number of retry retched for  ${file}`);
         }
         try {
-            core.info(`Uploading file: ${file}`);
             const artifactsPath = file.replace(dirname, '');
             const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), inputs.url).toString();
-            return yield (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
+            return (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
         }
         catch (error) {
             if (axios_1.default.isAxiosError(error) &&
                 ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 400) {
                 core.info('Error 400 retry uploading');
-                return yield upload_one_file(nb_try - 1, file, dirname, name, inputs);
+                return upload_one_file(nb_try - 1, file, dirname, name, inputs);
             }
             throw error;
         }
@@ -465,10 +475,11 @@ function upload(inputs) {
             }
             finally { if (e_1) throw e_1.error; }
         }
-        core.info('Waiting for all requests to finish');
         yield async_1.default.eachLimit(requests, 16, ((file, next) => __awaiter(this, void 0, void 0, function* () {
+            core.info(`Uploading file: ${file}`);
             yield upload_one_file(4, file, dirname, name, inputs);
             next();
+            core.info(`${file} has been uploaded`);
         })));
         core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
