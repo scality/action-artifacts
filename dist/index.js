@@ -267,7 +267,7 @@ function run() {
         try {
             const inputs = (0, inputs_artifacts_1.getInputs)();
             core.info(`Method ${inputs.method_type} has been selected`);
-            yield inputs.method(inputs);
+            inputs.method(inputs);
         }
         catch (error) {
             if (error instanceof Error)
@@ -275,7 +275,7 @@ function run() {
         }
     });
 }
-run().then(r => core.info('method executed'));
+run();
 
 
 /***/ }),
@@ -477,11 +477,11 @@ function upload(inputs) {
             finally { if (e_1) throw e_1.error; }
         }
         core.info(requests.length.toString());
-        async_1.default.eachLimit(requests, 8, ((file, next) => __awaiter(this, void 0, void 0, function* () {
-            upload_one_file(4, file, dirname, name, inputs).then(() => next());
-        }))).then(() => {
-            core.info('All files are uploaded ');
-        }).catch(err => core.info(err.message));
+        yield async_1.default.eachLimit(requests, 16, ((file, next) => __awaiter(this, void 0, void 0, function* () {
+            yield upload_one_file(4, file, dirname, name, inputs);
+            next();
+        })));
+        core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
         yield (0, artifacts_1.setNotice)(name, inputs.url);
     });

@@ -6,10 +6,10 @@ async function run(): Promise<void> {
     const inputs = getInputs()
 
     core.info(`Method ${inputs.method_type} has been selected`)
-    await inputs.method(inputs)
+    inputs.method(inputs)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
 }
 
-run().then(r => core.info('method executed'))
+run()

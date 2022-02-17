@@ -164,11 +164,12 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
 
   core.info(requests.length.toString())
 
-  async.eachLimit(requests, 16, (async (file: string, next) => {
-    upload_one_file(4, file, dirname, name, inputs).then(() => next())
-  })).then(() => {
-    core.info('All files are uploaded ')
-  }).catch(err => core.info(err.message))
+  await async.eachLimit(requests, 16, (async (file: string, next) => {
+    await upload_one_file(4, file, dirname, name, inputs)
+    next()
+  }))
+
+  core.info('All files are uploaded ')
 
   await setOutputs(name, inputs.url)
   await setNotice(name, inputs.url)
