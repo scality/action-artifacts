@@ -478,8 +478,8 @@ function upload(inputs) {
         yield async_1.default.eachLimit(requests, 16, ((file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
             yield upload_one_file(4, file, dirname, name, inputs);
-            next();
             core.info(`${file} has been uploaded`);
+            next();
         })));
         core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
