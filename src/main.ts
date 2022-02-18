@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import {getInputs} from './inputs-artifacts'
 
-function run(): void {
+async function run(): Promise<void> {
   try {
     const inputs = getInputs()
 
