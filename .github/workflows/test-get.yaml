@@ -2,8 +2,7 @@
 name: test-get
 
 on:
-  # Temporarily deactivating while method is not implemented
-  workflow_dispatch:
+  - push
 
 jobs:
   upload:

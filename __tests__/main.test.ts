@@ -75,3 +75,30 @@ test('test runs upload absolute path', () => {
   }
   console.log(cp.execFileSync(np, [ip], options).toString())
 })
+
+test('test runs get method', () => {
+  const workspace: string = process.env['GITHUB_WORKSPACE'] || ''
+  const source: string = 'artifacts'
+  process.env['INPUT_METHOD'] = 'upload'
+
+  fs.mkdirSync(path.join(workspace, source))
+  fs.writeFileSync(path.join(workspace, source, '.final_status'), 'SUCCESSFUL')
+
+  process.env['INPUT_SOURCE'] = source
+
+  const np = process.execPath
+  const ip = path.join(__dirname, '..', 'lib', 'main.js')
+  let options: cp.ExecFileSyncOptions = {
+    env: process.env
+  }
+  console.log(cp.execFileSync(np, [ip], options).toString())
+
+  process.env['INPUT_METHOD'] = 'get'
+  process.env['INPUT_WORKFLOW-NAME'] = process.env['GITHUB_WORKFLOW']
+  process.env['INPUT_SOURCE'] = ''
+
+  options = {
+    env: process.env
+  }
+  console.log(cp.execFileSync(np, [ip], options).toString())
+})

@@ -38,20 +38,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fileUpload = exports.setNotice = exports.setOutputs = exports.artifactsName = void 0;
+exports.fileUpload = exports.setNotice = exports.setOutputs = exports.artifactsPatternName = exports.artifactsName = exports.workflowName = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const process = __importStar(__nccwpck_require__(1765));
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const axios_retry_1 = __importDefault(__nccwpck_require__(9179));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
+function workflowName(workflow) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (workflow === undefined) {
+            workflow = github.context.workflow;
+        }
+        return workflow.replace(/\W/g, '-').replace(/^-/, '');
+    });
+}
+exports.workflowName = workflowName;
 function artifactsName() {
     return __awaiter(this, void 0, void 0, function* () {
         const owner = github.context.repo.owner;
         const repo = github.context.repo.repo;
-        const workflow = github.context.workflow
-            .replace(/\W/g, '-')
-            .replace(/^-/, '');
+        const workflow = yield workflowName();
         const commit = github.context.sha.slice(0, 10);
         const runNumber = github.context.runNumber;
         // run attempt is not available through GitHub toolkit yet.
@@ -60,6 +67,16 @@ function artifactsName() {
     });
 }
 exports.artifactsName = artifactsName;
+function artifactsPatternName(workflow) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const owner = github.context.repo.owner;
+        const repo = github.context.repo.repo;
+        const commit = github.context.sha.slice(0, 10);
+        workflow = yield workflowName(workflow);
+        return `github:${owner}:${repo}:staging-${commit}.${workflow}`;
+    });
+}
+exports.artifactsPatternName = artifactsPatternName;
 function setOutputs(name, url) {
     return __awaiter(this, void 0, void 0, function* () {
         core.setOutput('name', name);
@@ -202,7 +219,7 @@ function getInputs() {
     }
     else if (method_type === constants_1.Methods.Get) {
         workflow_name = core.getInput(constants_1.Inputs.Workflow_name, { required: true });
-        throw new Error(`Method ${method} does not exist`);
+        method = methods_1.get;
     }
     else if (method_type === constants_1.Methods.Setup) {
         method = methods_1.setup;
@@ -324,7 +341,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.upload = exports.prolong = exports.promote = exports.setup = void 0;
+exports.get = exports.upload = exports.prolong = exports.promote = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const glob = __importStar(__nccwpck_require__(8090));
@@ -332,6 +349,7 @@ const path = __importStar(__nccwpck_require__(5622));
 const artifacts_1 = __nccwpck_require__(5671);
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const async_1 = __importDefault(__nccwpck_require__(7888));
+const axios_retry_1 = __importDefault(__nccwpck_require__(9179));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
 function setup(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -475,18 +493,49 @@ function upload(inputs) {
             }
             finally { if (e_1) throw e_1.error; }
         }
-        yield async_1.default.eachLimit(requests, 16, ((file, next) => __awaiter(this, void 0, void 0, function* () {
+        yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
             yield upload_one_file(4, file, dirname, name, inputs);
             core.info(`${file} has been uploaded`);
             next();
-        })));
+        }));
         core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
         yield (0, artifacts_1.setNotice)(name, inputs.url);
     });
 }
 exports.upload = upload;
+function get(inputs) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pattern = yield (0, artifacts_1.artifactsPatternName)(inputs.workflow_name);
+        const request_config = {
+            auth: {
+                username: inputs.user,
+                password: inputs.password
+            },
+            validateStatus(status) {
+                return status === 302 || status === 404;
+            },
+            maxRedirects: 0
+        };
+        const final_url = new URL(path.join('/last_success/', pattern), inputs.url).toString();
+        (0, axios_retry_1.default)(axios_1.default);
+        const response = yield axios_1.default.get(final_url, request_config);
+        if (response.status === 302) {
+            const match = response.headers.location.match(/^\/download\/([^/]+)\//);
+            if (match !== null) {
+                core.info('Last successful artifacts has been found');
+                const name = match[1];
+                yield (0, artifacts_1.setOutputs)(name, inputs.url);
+                yield (0, artifacts_1.setNotice)(name, inputs.url);
+            }
+        }
+        else {
+            throw Error('Last successful artifacts has not been found');
+        }
+    });
+}
+exports.get = get;
 
 
 /***/ }),
