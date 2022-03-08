@@ -2,10 +2,17 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as glob from '@actions/glob'
 import * as path from 'path'
-import {artifactsName, fileUpload, setNotice, setOutputs} from './artifacts'
+import {
+  artifactsName,
+  artifactsPatternName,
+  fileUpload,
+  setNotice,
+  setOutputs
+} from './artifacts'
 import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
 import async from 'async'
+import axiosRetry from 'axios-retry'
 import fs from 'fs'
 
 export async function setup(inputs: InputsArtifacts): Promise<void> {
@@ -161,15 +168,50 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     requests.push(file)
   }
 
-  await async.eachLimit(requests, 16, (async (file: string, next) => {
+  await async.eachLimit(requests, 16, async (file: string, next) => {
     core.info(`Uploading file: ${file}`)
     await upload_one_file(4, file, dirname, name, inputs)
     core.info(`${file} has been uploaded`)
     next()
-  }))
+  })
 
   core.info('All files are uploaded ')
 
   await setOutputs(name, inputs.url)
   await setNotice(name, inputs.url)
+}
+
+export async function get(inputs: InputsArtifacts): Promise<void> {
+  const pattern: string = await artifactsPatternName(inputs.workflow_name)
+  const request_config: AxiosRequestConfig = {
+    auth: {
+      username: inputs.user,
+      password: inputs.password
+    },
+    validateStatus(status: number): boolean {
+      return status === 302 || status === 404
+    },
+    maxRedirects: 0
+  }
+  const final_url: string = new URL(
+    path.join('/last_success/', pattern),
+    inputs.url
+  ).toString()
+  axiosRetry(axios)
+
+  const response: AxiosResponse = await axios.get(final_url, request_config)
+
+  if (response.status === 302) {
+    const match: RegExpMatchArray | null = response.headers.location.match(
+      /^\/download\/([^/]+)\//
+    )
+    if (match !== null) {
+      core.info('Last successful artifacts has been found')
+      const name: string | null = match[1]
+      await setOutputs(name, inputs.url)
+      await setNotice(name, inputs.url)
+    }
+  } else {
+    throw Error('Last successful artifacts has not been found')
+  }
 }

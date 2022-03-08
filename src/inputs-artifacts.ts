@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import * as path from 'path'
 import {Inputs, Methods} from './constants'
-import {prolong, promote, setup, upload} from './methods'
+import {get, prolong, promote, setup, upload} from './methods'
 import {InputsArtifacts} from './inputs-helper'
 import process from 'process'
 
@@ -43,7 +43,7 @@ export function getInputs(): InputsArtifacts {
     method = promote
   } else if (method_type === Methods.Get) {
     workflow_name = core.getInput(Inputs.Workflow_name, {required: true})
-    throw new Error(`Method ${method} does not exist`)
+    method = get
   } else if (method_type === Methods.Setup) {
     method = setup
   } else {

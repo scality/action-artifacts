@@ -2,8 +2,7 @@
 name: test-get
 
 on:
-  # Temporarily deactivating while method is not implemented
-  workflow_dispatch:
+  - push
 
 jobs:
   upload:
@@ -39,7 +38,7 @@ jobs:
       - name: update
         run: apt-get update
       - run: apt-get install -y curl
-      - name: Artifacts Upload
+      - name: Get Artifacts
         id: artifacts-get
         uses: ./
         with:
@@ -59,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Artifacts Upload
+      - name: Get Artifacts
         id: artifacts-get
         uses: ./
         with:
