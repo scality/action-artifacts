@@ -3,6 +3,7 @@ export enum Inputs {
   Password = 'password',
   Url = 'url',
   Method = 'method',
+  Name = 'name',
   Tag = 'tag',
   Source = 'source',
   Workflow_name = 'workflow-name'

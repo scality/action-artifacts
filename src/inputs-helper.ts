@@ -7,6 +7,7 @@ export interface InputsArtifacts {
   url: string
   method: (x: InputsArtifacts) => Promise<void>
   method_type: string
+  name: string
   tag: string
   source: string
   workflow_name: string

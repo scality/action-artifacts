@@ -6,7 +6,7 @@ async function run(): Promise<void> {
     const inputs = getInputs()
 
     core.info(`Method ${inputs.method_type} has been selected`)
-    inputs.method(inputs)
+    await inputs.method(inputs)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

@@ -78,6 +78,10 @@ jobs:
         run: |
           echo ${{ steps.artifacts-promote.outputs.name }}
           echo ${{ steps.artifacts-promote.outputs.link }}
+      - name: Get promoted artifacts
+        run: |
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-promote.outputs.link }}/.final_status
+
       - name: Tag the repo
         run: git tag 1.0.1
       - name: Artifacts Promote

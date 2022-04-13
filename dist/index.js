@@ -131,6 +131,7 @@ var Inputs;
     Inputs["Password"] = "password";
     Inputs["Url"] = "url";
     Inputs["Method"] = "method";
+    Inputs["Name"] = "name";
     Inputs["Tag"] = "tag";
     Inputs["Source"] = "source";
     Inputs["Workflow_name"] = "workflow-name";
@@ -192,6 +193,7 @@ function getInputs() {
     let source = '';
     let tag = '';
     let workflow_name = '';
+    let name = '';
     const url = core.getInput(constants_1.Inputs.Url, { required: true });
     if (method !== constants_1.Methods.Setup) {
         password = core.getInput(constants_1.Inputs.Password, { required: true });
@@ -209,11 +211,11 @@ function getInputs() {
         method = methods_1.upload;
     }
     else if (method_type === constants_1.Methods.Prolong) {
-        workflow_name = core.getInput(constants_1.Inputs.Workflow_name, { required: true });
+        name = core.getInput(constants_1.Inputs.Name, { required: true });
         method = methods_1.prolong;
     }
     else if (method_type === constants_1.Methods.Promote) {
-        workflow_name = core.getInput(constants_1.Inputs.Workflow_name, { required: true });
+        name = core.getInput(constants_1.Inputs.Name, { required: true });
         tag = core.getInput(constants_1.Inputs.Tag, { required: true });
         method = methods_1.promote;
     }
@@ -235,7 +237,8 @@ function getInputs() {
         tag,
         method,
         method_type,
-        workflow_name
+        workflow_name,
+        name
     };
 }
 exports.getInputs = getInputs;
@@ -284,7 +287,7 @@ function run() {
         try {
             const inputs = (0, inputs_artifacts_1.getInputs)();
             core.info(`Method ${inputs.method_type} has been selected`);
-            inputs.method(inputs);
+            yield inputs.method(inputs);
         }
         catch (error) {
             if (error instanceof Error)
@@ -369,17 +372,18 @@ function promote(inputs) {
         };
         const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+.[0-9]+$');
         const promoted_regex = new RegExp('(^[^/]+:)promoted-([^/]+)$');
-        const staging_match = inputs.workflow_name.match(staging_regex);
-        const promoted_match = inputs.workflow_name.match(promoted_regex);
+        const staging_match = inputs.name.match(staging_regex);
+        const promoted_match = inputs.name.match(promoted_regex);
         let artifacts_commit = '';
         let artifacts_prefix = '';
         if (staging_match !== null) {
+            core.info('Staging artifacts has been selected');
             artifacts_commit = staging_match[3];
             artifacts_prefix = staging_match[1];
         }
         else if (promoted_match !== null) {
+            core.info('Promoted artifacts has been selected');
             const artifacts_tag = promoted_match[2];
-            myOutput = '';
             yield exec.exec('git', ['rev-list', '-n', '1', artifacts_tag], options);
             artifacts_commit = myOutput;
             artifacts_prefix = promoted_match[1];
@@ -392,7 +396,7 @@ function promote(inputs) {
         if (!myOutput.includes(artifacts_commit))
             throw Error(`Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`);
         const promoted_name = `${artifacts_prefix}promoted-${inputs.tag}`;
-        const final_url = new URL(path.join('/copy/', inputs.workflow_name, promoted_name), inputs.url)
+        const final_url = new URL(path.join('/copy/', inputs.name, promoted_name), inputs.url)
             .toString()
             .concat('/');
         const request_config = {
@@ -403,10 +407,12 @@ function promote(inputs) {
             maxBodyLength: Infinity,
             maxContentLength: Infinity
         };
+        core.info(`copying '${inputs.name}' to '${promoted_name}'`);
         const response = yield axios_1.default.get(final_url, request_config);
         if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
             throw Error(`Build not copied, ${response.status}: ${response.data}`);
         }
+        core.info(`'${inputs.name}' has been copied to '${promoted_name}'`);
         yield (0, artifacts_1.setOutputs)(promoted_name, inputs.url);
         yield (0, artifacts_1.setNotice)(promoted_name, inputs.url);
     });
@@ -415,12 +421,12 @@ exports.promote = promote;
 function prolong(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+.[0-9]+)$');
-        const match = inputs.workflow_name.match(name_regex);
+        const match = inputs.name.match(name_regex);
         if (match == null) {
             throw Error('The name is not one of Scality actions artifacts');
         }
         const artifacts_target = `${match[1]}prolonged${match[2]}`;
-        const final_url = new URL(path.join('/copy/', inputs.workflow_name, artifacts_target), inputs.url)
+        const final_url = new URL(path.join('/copy/', inputs.name, artifacts_target), inputs.url)
             .toString()
             .concat('/');
         const request_config = {
@@ -431,13 +437,14 @@ function prolong(inputs) {
             maxBodyLength: Infinity,
             maxContentLength: Infinity
         };
-        core.info(`copying '${inputs.workflow_name} to '${artifacts_target}`);
+        core.info(`copying '${inputs.name} to '${artifacts_target}`);
         const response = yield axios_1.default.get(final_url, request_config);
         if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
             throw Error(`Build not copied, ${response.status}: ${response.data}`);
         }
-        yield (0, artifacts_1.setOutputs)(inputs.workflow_name, artifacts_target);
-        yield (0, artifacts_1.setOutputs)(inputs.url, artifacts_target);
+        core.info(`'${inputs.name}' has been copied to '${artifacts_target}'`);
+        yield (0, artifacts_1.setOutputs)(artifacts_target, inputs.url);
+        yield (0, artifacts_1.setNotice)(artifacts_target, inputs.url);
     });
 }
 exports.prolong = prolong;

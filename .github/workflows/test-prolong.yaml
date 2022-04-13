@@ -32,3 +32,6 @@ jobs:
         run: |
           echo ${{ steps.artifacts-prolong.outputs.name }}
           echo ${{ steps.artifacts-prolong.outputs.link }}
+      - name: Get prolonged artifacts
+        run: |
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-prolong.outputs.link }}/.final_status

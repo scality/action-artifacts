@@ -17,6 +17,7 @@ export function getInputs(): InputsArtifacts {
   let source = ''
   let tag = ''
   let workflow_name = ''
+  let name = ''
 
   const url = core.getInput(Inputs.Url, {required: true})
 
@@ -35,10 +36,10 @@ export function getInputs(): InputsArtifacts {
     }
     method = upload
   } else if (method_type === Methods.Prolong) {
-    workflow_name = core.getInput(Inputs.Workflow_name, {required: true})
+    name = core.getInput(Inputs.Name, {required: true})
     method = prolong
   } else if (method_type === Methods.Promote) {
-    workflow_name = core.getInput(Inputs.Workflow_name, {required: true})
+    name = core.getInput(Inputs.Name, {required: true})
     tag = core.getInput(Inputs.Tag, {required: true})
     method = promote
   } else if (method_type === Methods.Get) {
@@ -58,6 +59,7 @@ export function getInputs(): InputsArtifacts {
     tag,
     method,
     method_type,
-    workflow_name
+    workflow_name,
+    name
   } as InputsArtifacts
 }
