@@ -502,7 +502,14 @@ function upload(inputs) {
         }
         yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
-            yield upload_one_file(4, file, dirname, name, inputs);
+            try {
+                yield upload_one_file(4, file, dirname, name, inputs);
+            }
+            catch (e) {
+                if (e instanceof Error) {
+                    return next(e);
+                }
+            }
             core.info(`${file} has been uploaded`);
             next();
         }));

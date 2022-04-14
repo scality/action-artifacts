@@ -176,7 +176,13 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
 
   await async.eachLimit(requests, 16, async (file: string, next) => {
     core.info(`Uploading file: ${file}`)
-    await upload_one_file(4, file, dirname, name, inputs)
+    try {
+      await upload_one_file(4, file, dirname, name, inputs)
+    } catch (e) {
+      if (e instanceof Error) {
+        return next(e)
+      }
+    }
     core.info(`${file} has been uploaded`)
     next()
   })
