@@ -2,10 +2,12 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as glob from '@actions/glob'
 import * as path from 'path'
+import * as process from 'process'
 import {
   artifactsName,
   artifactsPatternName,
   fileUpload,
+  fileVersion,
   setNotice,
   setOutputs
 } from './artifacts'
@@ -31,7 +33,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
   }
 
   const staging_regex = new RegExp(
-    '(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+.[0-9]+$'
+    '(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$'
   )
   const promoted_regex = new RegExp('(^[^/]+:)promoted-([^/]+)$')
 
@@ -90,9 +92,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
 }
 
 export async function prolong(inputs: InputsArtifacts): Promise<void> {
-  const name_regex = new RegExp(
-    '(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+.[0-9]+)$'
-  )
+  const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+)$')
   const match = inputs.name.match(name_regex)
   if (match == null) {
     throw Error('The name is not one of Scality actions artifacts')
@@ -135,7 +135,22 @@ async function upload_one_file(
     throw Error(`Number of retry retched for  ${file}`)
   }
   try {
+    const run_attempt: string =
+      process.env['GITHUB_RUN_ATTEMPT'] === undefined
+        ? '1'
+        : process.env['GITHUB_RUN_ATTEMPT']
+
     const artifactsPath: string = file.replace(dirname, '')
+    if (run_attempt !== '1') {
+      await fileVersion(
+        inputs.url,
+        name,
+        inputs.user,
+        inputs.password,
+        artifactsPath,
+        run_attempt
+      )
+    }
     const uploadUrl: string = new URL(
       path.join('/upload/', name, artifactsPath),
       inputs.url

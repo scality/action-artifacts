@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import * as process from 'process'
+import * as path from 'path'
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
 import axiosRetry from 'axios-retry'
 import fs from 'fs'
@@ -20,10 +20,8 @@ export async function artifactsName(): Promise<string> {
   const workflow: string = await workflowName()
   const commit: string = github.context.sha.slice(0, 10)
   const runNumber: number = github.context.runNumber
-  // run attempt is not available through GitHub toolkit yet.
-  const runAttempt: string | undefined = process.env['GITHUB_RUN_ATTEMPT']
 
-  return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}.${runAttempt}`
+  return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`
 }
 
 export async function artifactsPatternName(workflow: string): Promise<string> {
@@ -53,6 +51,7 @@ export async function fileUpload(
   file: string,
   retries = 3
 ): Promise<AxiosResponse> {
+  const body_size: number = fs.statSync(file).size
   const fileStream: fs.ReadStream = fs.createReadStream(file)
   const request_config: AxiosRequestConfig = {
     auth: {
@@ -66,11 +65,40 @@ export async function fileUpload(
     // To be reverted once the library has provided a better
     // solution
     // https://github.com/axios/axios/issues/4423
-    maxRedirects: 0
+    maxRedirects: 0,
+    headers: {
+      'Content-Length': body_size.toString()
+    }
   }
   axiosRetry(axios, {
     retries
   })
 
   return axios.put(url, fileStream, request_config)
+}
+
+export async function fileVersion(
+  url: string,
+  name: string,
+  username: string,
+  password: string,
+  file: string,
+  build_attempt: string
+): Promise<void> {
+  const request_config: AxiosRequestConfig = {
+    auth: {
+      username,
+      password
+    }
+  }
+
+  const final_url: string = new URL(
+    path.join('/version/', build_attempt, name, file),
+    url
+  ).toString()
+
+  const response = await axios.get(final_url, request_config)
+  if (response.status !== 200 || !response.data.endsWith('PASSED\n')) {
+    throw Error(`Could not version file: ${file}`)
+  }
 }

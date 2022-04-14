@@ -38,10 +38,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fileUpload = exports.setNotice = exports.setOutputs = exports.artifactsPatternName = exports.artifactsName = exports.workflowName = void 0;
+exports.fileVersion = exports.fileUpload = exports.setNotice = exports.setOutputs = exports.artifactsPatternName = exports.artifactsName = exports.workflowName = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
-const process = __importStar(__nccwpck_require__(1765));
+const path = __importStar(__nccwpck_require__(5622));
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const axios_retry_1 = __importDefault(__nccwpck_require__(9179));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
@@ -61,9 +61,7 @@ function artifactsName() {
         const workflow = yield workflowName();
         const commit = github.context.sha.slice(0, 10);
         const runNumber = github.context.runNumber;
-        // run attempt is not available through GitHub toolkit yet.
-        const runAttempt = process.env['GITHUB_RUN_ATTEMPT'];
-        return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}.${runAttempt}`;
+        return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`;
     });
 }
 exports.artifactsName = artifactsName;
@@ -92,6 +90,7 @@ function setNotice(name, url) {
 exports.setNotice = setNotice;
 function fileUpload(url, username, password, file, retries = 3) {
     return __awaiter(this, void 0, void 0, function* () {
+        const body_size = fs_1.default.statSync(file).size;
         const fileStream = fs_1.default.createReadStream(file);
         const request_config = {
             auth: {
@@ -105,7 +104,10 @@ function fileUpload(url, username, password, file, retries = 3) {
             // To be reverted once the library has provided a better
             // solution
             // https://github.com/axios/axios/issues/4423
-            maxRedirects: 0
+            maxRedirects: 0,
+            headers: {
+                'Content-Length': body_size.toString()
+            }
         };
         (0, axios_retry_1.default)(axios_1.default, {
             retries
@@ -114,6 +116,22 @@ function fileUpload(url, username, password, file, retries = 3) {
     });
 }
 exports.fileUpload = fileUpload;
+function fileVersion(url, name, username, password, file, build_attempt) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const request_config = {
+            auth: {
+                username,
+                password
+            }
+        };
+        const final_url = new URL(path.join('/version/', build_attempt, name, file), url).toString();
+        const response = yield axios_1.default.get(final_url, request_config);
+        if (response.status !== 200 || !response.data.endsWith('PASSED\n')) {
+            throw Error(`Could not version file: ${file}`);
+        }
+    });
+}
+exports.fileVersion = fileVersion;
 
 
 /***/ }),
@@ -349,6 +367,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const glob = __importStar(__nccwpck_require__(8090));
 const path = __importStar(__nccwpck_require__(5622));
+const process = __importStar(__nccwpck_require__(1765));
 const artifacts_1 = __nccwpck_require__(5671);
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const async_1 = __importDefault(__nccwpck_require__(7888));
@@ -370,7 +389,7 @@ function promote(inputs) {
                 myOutput += data.toString();
             }
         };
-        const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+.[0-9]+$');
+        const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$');
         const promoted_regex = new RegExp('(^[^/]+:)promoted-([^/]+)$');
         const staging_match = inputs.name.match(staging_regex);
         const promoted_match = inputs.name.match(promoted_regex);
@@ -420,7 +439,7 @@ function promote(inputs) {
 exports.promote = promote;
 function prolong(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+.[0-9]+)$');
+        const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+)$');
         const match = inputs.name.match(name_regex);
         if (match == null) {
             throw Error('The name is not one of Scality actions artifacts');
@@ -455,7 +474,13 @@ function upload_one_file(nb_try, file, dirname, name, inputs) {
             throw Error(`Number of retry retched for  ${file}`);
         }
         try {
+            const run_attempt = process.env['GITHUB_RUN_ATTEMPT'] === undefined
+                ? '1'
+                : process.env['GITHUB_RUN_ATTEMPT'];
             const artifactsPath = file.replace(dirname, '');
+            if (run_attempt !== '1') {
+                yield (0, artifacts_1.fileVersion)(inputs.url, name, inputs.user, inputs.password, artifactsPath, run_attempt);
+            }
             const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), inputs.url).toString();
             return (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
         }
