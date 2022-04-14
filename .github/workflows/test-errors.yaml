@@ -1,0 +1,36 @@
+---
+name: 'Test errors'
+
+on:
+  - push
+
+jobs:
+  file-does-not-exist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Push all files
+        uses: ./
+        continue-on-error: true
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./test-files
+          method: upload
+
+  wrong-password:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Push all files
+        uses: ./
+        continue-on-error: true
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: 'wrong-password'
+          source: action.yaml
+          method: upload
+
+
