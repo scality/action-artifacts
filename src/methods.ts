@@ -11,7 +11,7 @@ import {
   setNotice,
   setOutputs
 } from './artifacts'
-import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios'
+import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
 import async from 'async'
 import axiosRetry from 'axios-retry'
@@ -125,47 +125,32 @@ export async function prolong(inputs: InputsArtifacts): Promise<void> {
 }
 
 async function upload_one_file(
-  nb_try: number,
   file: string,
   dirname: string,
   name: string,
   inputs: InputsArtifacts
 ): Promise<AxiosResponse> {
-  if (nb_try === 0) {
-    throw Error(`Number of retry retched for  ${file}`)
-  }
-  try {
-    const run_attempt: string =
-      process.env['GITHUB_RUN_ATTEMPT'] === undefined
-        ? '1'
-        : process.env['GITHUB_RUN_ATTEMPT']
+  const run_attempt: string =
+    process.env['GITHUB_RUN_ATTEMPT'] === undefined
+      ? '1'
+      : process.env['GITHUB_RUN_ATTEMPT']
 
-    const artifactsPath: string = file.replace(dirname, '')
-    if (run_attempt !== '1') {
-      await fileVersion(
-        inputs.url,
-        name,
-        inputs.user,
-        inputs.password,
-        artifactsPath,
-        run_attempt
-      )
-    }
-    const uploadUrl: string = new URL(
-      path.join('/upload/', name, artifactsPath),
-      inputs.url
-    ).toString()
-    return fileUpload(uploadUrl, inputs.user, inputs.password, file)
-  } catch (error: unknown) {
-    if (
-      axios.isAxiosError(error) &&
-      (error as AxiosError<unknown, unknown>).response?.status === 400
-    ) {
-      core.info('Error 400 retry uploading')
-      return upload_one_file(nb_try - 1, file, dirname, name, inputs)
-    }
-    throw error
+  const artifactsPath: string = file.replace(dirname, '')
+  if (run_attempt !== '1') {
+    await fileVersion(
+      inputs.url,
+      name,
+      inputs.user,
+      inputs.password,
+      artifactsPath,
+      run_attempt
+    )
   }
+  const uploadUrl: string = new URL(
+    path.join('/upload/', name, artifactsPath),
+    inputs.url
+  ).toString()
+  return fileUpload(uploadUrl, inputs.user, inputs.password, file)
 }
 
 export async function upload(inputs: InputsArtifacts): Promise<void> {
@@ -189,10 +174,10 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     requests.push(file)
   }
 
-  await async.eachLimit(requests, 16, async (file: string, next) => {
+  await async.eachLimit(requests, 10, async (file: string, next) => {
     core.info(`Uploading file: ${file}`)
     try {
-      await upload_one_file(4, file, dirname, name, inputs)
+      await upload_one_file(file, dirname, name, inputs)
     } catch (e) {
       if (e instanceof Error) {
         return next(e)

@@ -19,9 +19,13 @@ jobs:
         test:
         - host: ubuntu-latest
           name: github-hosted
+        - host: ubuntu-latest
+          name: github-hosted-container
+          container: ubuntu
         - host: [self-hosted, focal, large]
           name: self-hosted
     runs-on: ${{ matrix.test.host }}
+    container: ${{ matrix.test.container }}
     name: load tests on ${{ matrix.test.name }}
     steps:
       - uses: actions/checkout@v1
@@ -31,6 +35,7 @@ jobs:
           for i in {1..20}; do
             head -c 1G /dev/urandom > artifacts/${{ matrix.test.name }}/$i.txt
           done
+        shell: bash
       - name: Push all files
         uses: ./
         with:

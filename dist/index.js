@@ -38,13 +38,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fileVersion = exports.fileUpload = exports.setNotice = exports.setOutputs = exports.artifactsPatternName = exports.artifactsName = exports.workflowName = void 0;
+exports.fileVersion = exports.fileUpload = exports.retryArtifactsUpload = exports.debugAxiosError = exports.isUploadStatusError = exports.setNotice = exports.setOutputs = exports.artifactsPatternName = exports.artifactsName = exports.workflowName = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const path = __importStar(__nccwpck_require__(5622));
 const axios_1 = __importDefault(__nccwpck_require__(6545));
-const axios_retry_1 = __importDefault(__nccwpck_require__(9179));
+const axios_retry_1 = __importStar(__nccwpck_require__(9179));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
+const https_1 = __importDefault(__nccwpck_require__(7211));
 function workflowName(workflow) {
     return __awaiter(this, void 0, void 0, function* () {
         if (workflow === undefined) {
@@ -88,7 +89,29 @@ function setNotice(name, url) {
     });
 }
 exports.setNotice = setNotice;
-function fileUpload(url, username, password, file, retries = 3) {
+function isUploadStatusError(error) {
+    return !error.response || error.response.status !== 200;
+}
+exports.isUploadStatusError = isUploadStatusError;
+function debugAxiosError(error) {
+    var _a, _b;
+    const debug = `Request on ${error.config.url} failed with ` +
+        `code: ${error.code} ` +
+        `status: ${(_a = error.response) === null || _a === void 0 ? void 0 : _a.status} ` +
+        `data: ${(_b = error.response) === null || _b === void 0 ? void 0 : _b.data}`;
+    core.info(debug);
+}
+exports.debugAxiosError = debugAxiosError;
+function retryArtifactsUpload(error) {
+    debugAxiosError(error);
+    if ((0, axios_retry_1.isNetworkOrIdempotentRequestError)(error) || isUploadStatusError(error)) {
+        core.info(`Request on ${error.config.url} can be retried`);
+        return true;
+    }
+    return false;
+}
+exports.retryArtifactsUpload = retryArtifactsUpload;
+function fileUpload(url, username, password, file, retries = 10) {
     return __awaiter(this, void 0, void 0, function* () {
         const body_size = fs_1.default.statSync(file).size;
         const fileStream = fs_1.default.createReadStream(file);
@@ -107,10 +130,17 @@ function fileUpload(url, username, password, file, retries = 3) {
             maxRedirects: 0,
             headers: {
                 'Content-Length': body_size.toString()
-            }
+            },
+            httpsAgent: new https_1.default.Agent({
+                keepAlive: true,
+                maxSockets: 20
+            })
         };
         (0, axios_retry_1.default)(axios_1.default, {
-            retries
+            retries,
+            retryCondition: retryArtifactsUpload,
+            shouldResetTimeout: true,
+            retryDelay: axios_retry_1.exponentialDelay
         });
         return axios_1.default.put(url, fileStream, request_config);
     });
@@ -467,31 +497,17 @@ function prolong(inputs) {
     });
 }
 exports.prolong = prolong;
-function upload_one_file(nb_try, file, dirname, name, inputs) {
-    var _a;
+function upload_one_file(file, dirname, name, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (nb_try === 0) {
-            throw Error(`Number of retry retched for  ${file}`);
+        const run_attempt = process.env['GITHUB_RUN_ATTEMPT'] === undefined
+            ? '1'
+            : process.env['GITHUB_RUN_ATTEMPT'];
+        const artifactsPath = file.replace(dirname, '');
+        if (run_attempt !== '1') {
+            yield (0, artifacts_1.fileVersion)(inputs.url, name, inputs.user, inputs.password, artifactsPath, run_attempt);
         }
-        try {
-            const run_attempt = process.env['GITHUB_RUN_ATTEMPT'] === undefined
-                ? '1'
-                : process.env['GITHUB_RUN_ATTEMPT'];
-            const artifactsPath = file.replace(dirname, '');
-            if (run_attempt !== '1') {
-                yield (0, artifacts_1.fileVersion)(inputs.url, name, inputs.user, inputs.password, artifactsPath, run_attempt);
-            }
-            const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), inputs.url).toString();
-            return (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
-        }
-        catch (error) {
-            if (axios_1.default.isAxiosError(error) &&
-                ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 400) {
-                core.info('Error 400 retry uploading');
-                return upload_one_file(nb_try - 1, file, dirname, name, inputs);
-            }
-            throw error;
-        }
+        const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), inputs.url).toString();
+        return (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
     });
 }
 function upload(inputs) {
@@ -525,10 +541,10 @@ function upload(inputs) {
             }
             finally { if (e_1) throw e_1.error; }
         }
-        yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
+        yield async_1.default.eachLimit(requests, 10, (file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
             try {
-                yield upload_one_file(4, file, dirname, name, inputs);
+                yield upload_one_file(file, dirname, name, inputs);
             }
             catch (e) {
                 if (e instanceof Error) {

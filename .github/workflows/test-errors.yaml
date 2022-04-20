@@ -41,3 +41,20 @@ jobs:
         if: steps.artifacts-test.outcome == 'success'
         run: /bin/false
 
+  wrong-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Push all files
+        id: artifacts-test
+        continue-on-error: true
+        uses: ./
+        with:
+          url: http://localhost:4242
+          user: toto
+          password: 'wrong-password'
+          source: action.yaml
+          method: upload
+      - name: verify error
+        if: steps.artifacts-test.outcome == 'success'
+        run: /bin/false

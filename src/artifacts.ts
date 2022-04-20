@@ -1,9 +1,13 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as path from 'path'
-import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
-import axiosRetry from 'axios-retry'
+import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios'
+import axiosRetry, {
+  exponentialDelay,
+  isNetworkOrIdempotentRequestError
+} from 'axios-retry'
 import fs from 'fs'
+import https from 'https'
 
 export async function workflowName(
   workflow?: string | undefined
@@ -44,12 +48,34 @@ export async function setNotice(name: string, url: string): Promise<void> {
   )
 }
 
+export function isUploadStatusError(error: AxiosError): boolean {
+  return !error.response || error.response.status !== 200
+}
+
+export function debugAxiosError(error: AxiosError): void {
+  const debug: string =
+    `Request on ${error.config.url} failed with ` +
+    `code: ${error.code} ` +
+    `status: ${error.response?.status} ` +
+    `data: ${error.response?.data}`
+  core.info(debug)
+}
+
+export function retryArtifactsUpload(error: AxiosError): boolean {
+  debugAxiosError(error)
+  if (isNetworkOrIdempotentRequestError(error) || isUploadStatusError(error)) {
+    core.info(`Request on ${error.config.url} can be retried`)
+    return true
+  }
+  return false
+}
+
 export async function fileUpload(
   url: string,
   username: string,
   password: string,
   file: string,
-  retries = 3
+  retries = 10
 ): Promise<AxiosResponse> {
   const body_size: number = fs.statSync(file).size
   const fileStream: fs.ReadStream = fs.createReadStream(file)
@@ -68,10 +94,17 @@ export async function fileUpload(
     maxRedirects: 0,
     headers: {
       'Content-Length': body_size.toString()
-    }
+    },
+    httpsAgent: new https.Agent({
+      keepAlive: true,
+      maxSockets: 20
+    })
   }
   axiosRetry(axios, {
-    retries
+    retries,
+    retryCondition: retryArtifactsUpload,
+    shouldResetTimeout: true,
+    retryDelay: exponentialDelay
   })
 
   return axios.put(url, fileStream, request_config)

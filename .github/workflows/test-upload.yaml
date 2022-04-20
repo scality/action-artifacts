@@ -9,9 +9,27 @@ jobs:
     runs-on: ubuntu-latest
     name: A job that pushes a lot of files on artifacts
     steps:
-      - uses: actions/checkout@v1
-      - name: create one hundred files
-        run: mkdir -p test-files && for i in {1..100}; do echo $RANDOM > ./test-files/$RANDOM.txt; done
+      - uses: actions/checkout@v2
+      - name: create multiple files
+        run: mkdir -p test-files && for i in {1..2000}; do dd if=/dev/random of=test-files/$i.txt count=1 bs=1M; done
+      - name: Push all files
+        uses: ./
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./test-files
+          method: upload
+
+  test-upload-multiple-files-container:
+    runs-on: ubuntu-latest
+    container: ubuntu
+    name: Upload multiple files inside from a container job
+    steps:
+      - uses: actions/checkout@v2
+      - name: create multiple files
+        run: mkdir -p test-files && for i in {1..2000}; do dd if=/dev/random of=test-files/$i.txt count=1 bs=1M; done
+        shell: bash
       - name: Push all files
         uses: ./
         with:
