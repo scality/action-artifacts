@@ -10,27 +10,34 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Push all files
-        uses: ./
+        id: artifacts-test
         continue-on-error: true
+        uses: ./
         with:
           url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./test-files
           method: upload
+      - name: verify error
+        if: steps.artifacts-test.outcome == 'success'
+        run: /bin/false
 
   wrong-password:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - name: Push all files
-        uses: ./
+        id: artifacts-test
         continue-on-error: true
+        uses: ./
         with:
           url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: 'wrong-password'
           source: action.yaml
           method: upload
-
+      - name: verify error
+        if: steps.artifacts-test.outcome == 'success'
+        run: /bin/false
 
