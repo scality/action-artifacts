@@ -42,10 +42,8 @@ exports.fileVersion = exports.fileUpload = exports.retryArtifactsUpload = export
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const path = __importStar(__nccwpck_require__(5622));
-const axios_1 = __importDefault(__nccwpck_require__(6545));
 const axios_retry_1 = __importStar(__nccwpck_require__(9179));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
-const https_1 = __importDefault(__nccwpck_require__(7211));
 function workflowName(workflow) {
     return __awaiter(this, void 0, void 0, function* () {
         if (workflow === undefined) {
@@ -111,15 +109,11 @@ function retryArtifactsUpload(error) {
     return false;
 }
 exports.retryArtifactsUpload = retryArtifactsUpload;
-function fileUpload(url, username, password, file, retries = 10) {
+function fileUpload(client, url, file, retries = 10) {
     return __awaiter(this, void 0, void 0, function* () {
         const body_size = fs_1.default.statSync(file).size;
         const fileStream = fs_1.default.createReadStream(file);
         const request_config = {
-            auth: {
-                username,
-                password
-            },
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
             // Workaround regarding Axios memory consuption when
@@ -130,32 +124,22 @@ function fileUpload(url, username, password, file, retries = 10) {
             maxRedirects: 0,
             headers: {
                 'Content-Length': body_size.toString()
-            },
-            httpsAgent: new https_1.default.Agent({
-                keepAlive: true,
-                maxSockets: 20
-            })
+            }
         };
-        (0, axios_retry_1.default)(axios_1.default, {
+        (0, axios_retry_1.default)(client, {
             retries,
             retryCondition: retryArtifactsUpload,
             shouldResetTimeout: true,
             retryDelay: axios_retry_1.exponentialDelay
         });
-        return axios_1.default.put(url, fileStream, request_config);
+        return client.put(url, fileStream, request_config);
     });
 }
 exports.fileUpload = fileUpload;
-function fileVersion(url, name, username, password, file, build_attempt) {
+function fileVersion(url, name, client, file, build_attempt) {
     return __awaiter(this, void 0, void 0, function* () {
-        const request_config = {
-            auth: {
-                username,
-                password
-            }
-        };
         const final_url = new URL(path.join('/version/', build_attempt, name, file), url).toString();
-        const response = yield axios_1.default.get(final_url, request_config);
+        const response = yield client.get(final_url);
         if (response.status !== 200 || !response.data.endsWith('PASSED\n')) {
             throw Error(`Could not version file: ${file}`);
         }
@@ -403,6 +387,7 @@ const axios_1 = __importDefault(__nccwpck_require__(6545));
 const async_1 = __importDefault(__nccwpck_require__(7888));
 const axios_retry_1 = __importDefault(__nccwpck_require__(9179));
 const fs_1 = __importDefault(__nccwpck_require__(5747));
+const https_1 = __importDefault(__nccwpck_require__(7211));
 function setup(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const name = yield (0, artifacts_1.artifactsName)();
@@ -497,17 +482,17 @@ function prolong(inputs) {
     });
 }
 exports.prolong = prolong;
-function upload_one_file(file, dirname, name, inputs) {
+function upload_one_file(client, file, dirname, name, url) {
     return __awaiter(this, void 0, void 0, function* () {
         const run_attempt = process.env['GITHUB_RUN_ATTEMPT'] === undefined
             ? '1'
             : process.env['GITHUB_RUN_ATTEMPT'];
         const artifactsPath = file.replace(dirname, '');
         if (run_attempt !== '1') {
-            yield (0, artifacts_1.fileVersion)(inputs.url, name, inputs.user, inputs.password, artifactsPath, run_attempt);
+            yield (0, artifacts_1.fileVersion)(url, name, client, artifactsPath, run_attempt);
         }
-        const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), inputs.url).toString();
-        return (0, artifacts_1.fileUpload)(uploadUrl, inputs.user, inputs.password, file);
+        const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), url).toString();
+        return (0, artifacts_1.fileUpload)(client, uploadUrl, file);
     });
 }
 function upload(inputs) {
@@ -516,6 +501,16 @@ function upload(inputs) {
         const name = yield (0, artifacts_1.artifactsName)();
         let dirname;
         const requests = [];
+        const client = axios_1.default.create({
+            auth: {
+                username: inputs.user,
+                password: inputs.password
+            },
+            httpsAgent: new https_1.default.Agent({
+                keepAlive: true,
+                maxSockets: 20
+            })
+        });
         if (fs_1.default.statSync(inputs.source).isFile()) {
             dirname = path.dirname(inputs.source);
         }
@@ -541,10 +536,10 @@ function upload(inputs) {
             }
             finally { if (e_1) throw e_1.error; }
         }
-        yield async_1.default.eachLimit(requests, 10, (file, next) => __awaiter(this, void 0, void 0, function* () {
+        yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
             try {
-                yield upload_one_file(file, dirname, name, inputs);
+                yield upload_one_file(client, file, dirname, name, inputs.url);
             }
             catch (e) {
                 if (e instanceof Error) {

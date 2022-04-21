@@ -1,13 +1,17 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as path from 'path'
-import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios'
+import {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse
+} from 'axios'
 import axiosRetry, {
   exponentialDelay,
   isNetworkOrIdempotentRequestError
 } from 'axios-retry'
 import fs from 'fs'
-import https from 'https'
 
 export async function workflowName(
   workflow?: string | undefined
@@ -71,19 +75,14 @@ export function retryArtifactsUpload(error: AxiosError): boolean {
 }
 
 export async function fileUpload(
+  client: AxiosInstance,
   url: string,
-  username: string,
-  password: string,
   file: string,
   retries = 10
 ): Promise<AxiosResponse> {
   const body_size: number = fs.statSync(file).size
   const fileStream: fs.ReadStream = fs.createReadStream(file)
   const request_config: AxiosRequestConfig = {
-    auth: {
-      username,
-      password
-    },
     maxBodyLength: Infinity,
     maxContentLength: Infinity,
     // Workaround regarding Axios memory consuption when
@@ -94,43 +93,31 @@ export async function fileUpload(
     maxRedirects: 0,
     headers: {
       'Content-Length': body_size.toString()
-    },
-    httpsAgent: new https.Agent({
-      keepAlive: true,
-      maxSockets: 20
-    })
+    }
   }
-  axiosRetry(axios, {
+  axiosRetry(client, {
     retries,
     retryCondition: retryArtifactsUpload,
     shouldResetTimeout: true,
     retryDelay: exponentialDelay
   })
 
-  return axios.put(url, fileStream, request_config)
+  return client.put(url, fileStream, request_config)
 }
 
 export async function fileVersion(
   url: string,
   name: string,
-  username: string,
-  password: string,
+  client: AxiosInstance,
   file: string,
   build_attempt: string
 ): Promise<void> {
-  const request_config: AxiosRequestConfig = {
-    auth: {
-      username,
-      password
-    }
-  }
-
   const final_url: string = new URL(
     path.join('/version/', build_attempt, name, file),
     url
   ).toString()
 
-  const response = await axios.get(final_url, request_config)
+  const response = await client.get(final_url)
   if (response.status !== 200 || !response.data.endsWith('PASSED\n')) {
     throw Error(`Could not version file: ${file}`)
   }

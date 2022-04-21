@@ -11,11 +11,12 @@ import {
   setNotice,
   setOutputs
 } from './artifacts'
-import axios, {AxiosRequestConfig, AxiosResponse} from 'axios'
+import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
 import async from 'async'
 import axiosRetry from 'axios-retry'
 import fs from 'fs'
+import https from 'https'
 
 export async function setup(inputs: InputsArtifacts): Promise<void> {
   const name: string = await artifactsName()
@@ -125,10 +126,11 @@ export async function prolong(inputs: InputsArtifacts): Promise<void> {
 }
 
 async function upload_one_file(
+  client: AxiosInstance,
   file: string,
   dirname: string,
   name: string,
-  inputs: InputsArtifacts
+  url: string
 ): Promise<AxiosResponse> {
   const run_attempt: string =
     process.env['GITHUB_RUN_ATTEMPT'] === undefined
@@ -137,26 +139,29 @@ async function upload_one_file(
 
   const artifactsPath: string = file.replace(dirname, '')
   if (run_attempt !== '1') {
-    await fileVersion(
-      inputs.url,
-      name,
-      inputs.user,
-      inputs.password,
-      artifactsPath,
-      run_attempt
-    )
+    await fileVersion(url, name, client, artifactsPath, run_attempt)
   }
   const uploadUrl: string = new URL(
     path.join('/upload/', name, artifactsPath),
-    inputs.url
+    url
   ).toString()
-  return fileUpload(uploadUrl, inputs.user, inputs.password, file)
+  return fileUpload(client, uploadUrl, file)
 }
 
 export async function upload(inputs: InputsArtifacts): Promise<void> {
   const name: string = await artifactsName()
   let dirname: string
   const requests = []
+  const client: AxiosInstance = axios.create({
+    auth: {
+      username: inputs.user,
+      password: inputs.password
+    },
+    httpsAgent: new https.Agent({
+      keepAlive: true,
+      maxSockets: 20
+    })
+  })
 
   if (fs.statSync(inputs.source).isFile()) {
     dirname = path.dirname(inputs.source)
@@ -174,10 +179,10 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     requests.push(file)
   }
 
-  await async.eachLimit(requests, 10, async (file: string, next) => {
+  await async.eachLimit(requests, 16, async (file: string, next) => {
     core.info(`Uploading file: ${file}`)
     try {
-      await upload_one_file(file, dirname, name, inputs)
+      await upload_one_file(client, file, dirname, name, inputs.url)
     } catch (e) {
       if (e instanceof Error) {
         return next(e)
