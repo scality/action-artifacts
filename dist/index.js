@@ -132,7 +132,16 @@ function fileUpload(client, url, file, retries = 10) {
             shouldResetTimeout: true,
             retryDelay: axios_retry_1.exponentialDelay
         });
-        return client.put(url, fileStream, request_config);
+        let put_res;
+        try {
+            put_res = client.put(url, fileStream, request_config);
+        }
+        catch (e) {
+            fileStream.destroy();
+            throw e;
+        }
+        fileStream.destroy();
+        return put_res;
     });
 }
 exports.fileUpload = fileUpload;

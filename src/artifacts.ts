@@ -102,7 +102,15 @@ export async function fileUpload(
     retryDelay: exponentialDelay
   })
 
-  return client.put(url, fileStream, request_config)
+  let put_res: Promise<AxiosResponse>
+  try {
+    put_res = client.put(url, fileStream, request_config)
+  } catch (e) {
+    fileStream.destroy()
+    throw e
+  }
+  fileStream.destroy()
+  return put_res
 }
 
 export async function fileVersion(
