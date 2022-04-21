@@ -1,16 +1,8 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as path from 'path'
-import {
-  AxiosError,
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse
-} from 'axios'
-import axiosRetry, {
-  exponentialDelay,
-  isNetworkOrIdempotentRequestError
-} from 'axios-retry'
+import {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
+import {artifactsRetry} from './utils'
 import fs from 'fs'
 
 export async function workflowName(
@@ -52,28 +44,6 @@ export async function setNotice(name: string, url: string): Promise<void> {
   )
 }
 
-export function isUploadStatusError(error: AxiosError): boolean {
-  return !error.response || error.response.status !== 200
-}
-
-export function debugAxiosError(error: AxiosError): void {
-  const debug: string =
-    `Request on ${error.config.url} failed with ` +
-    `code: ${error.code} ` +
-    `status: ${error.response?.status} ` +
-    `data: ${error.response?.data}`
-  core.info(debug)
-}
-
-export function retryArtifactsUpload(error: AxiosError): boolean {
-  debugAxiosError(error)
-  if (isNetworkOrIdempotentRequestError(error) || isUploadStatusError(error)) {
-    core.info(`Request on ${error.config.url} can be retried`)
-    return true
-  }
-  return false
-}
-
 export async function fileUpload(
   client: AxiosInstance,
   url: string,
@@ -95,12 +65,7 @@ export async function fileUpload(
       'Content-Length': body_size.toString()
     }
   }
-  axiosRetry(client, {
-    retries,
-    retryCondition: retryArtifactsUpload,
-    shouldResetTimeout: true,
-    retryDelay: exponentialDelay
-  })
+  artifactsRetry(client, retries)
 
   return client.put(url, fileStream, request_config)
 }

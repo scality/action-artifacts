@@ -13,8 +13,8 @@ import {
 } from './artifacts'
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
+import {artifactsRetry} from './utils'
 import async from 'async'
-import axiosRetry from 'axios-retry'
 import fs from 'fs'
 import https from 'https'
 
@@ -214,7 +214,7 @@ export async function get(inputs: InputsArtifacts): Promise<void> {
     path.join('/last_success/', pattern),
     inputs.url
   ).toString()
-  axiosRetry(axios)
+  artifactsRetry(axios)
 
   const response: AxiosResponse = await axios.get(final_url, request_config)
 
