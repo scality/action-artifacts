@@ -109,7 +109,6 @@ export async function fileUpload(
     fileStream.destroy()
     throw e
   }
-  fileStream.destroy()
   return put_res
 }
 

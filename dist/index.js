@@ -140,7 +140,6 @@ function fileUpload(client, url, file, retries = 10) {
             fileStream.destroy();
             throw e;
         }
-        fileStream.destroy();
         return put_res;
     });
 }
