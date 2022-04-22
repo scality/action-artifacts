@@ -92,6 +92,7 @@ function setNotice(name, url) {
 exports.setNotice = setNotice;
 function fileUpload(url, username, password, file, retries = 3) {
     return __awaiter(this, void 0, void 0, function* () {
+        const body_size = fs_1.default.statSync(file).size;
         const fileStream = fs_1.default.createReadStream(file);
         const request_config = {
             auth: {
@@ -105,7 +106,10 @@ function fileUpload(url, username, password, file, retries = 3) {
             // To be reverted once the library has provided a better
             // solution
             // https://github.com/axios/axios/issues/4423
-            maxRedirects: 0
+            maxRedirects: 0,
+            headers: {
+                'Content-Length': body_size.toString()
+            }
         };
         (0, axios_retry_1.default)(axios_1.default, {
             retries

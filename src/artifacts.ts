@@ -53,6 +53,7 @@ export async function fileUpload(
   file: string,
   retries = 3
 ): Promise<AxiosResponse> {
+  const body_size: number = fs.statSync(file).size
   const fileStream: fs.ReadStream = fs.createReadStream(file)
   const request_config: AxiosRequestConfig = {
     auth: {
@@ -66,7 +67,10 @@ export async function fileUpload(
     // To be reverted once the library has provided a better
     // solution
     // https://github.com/axios/axios/issues/4423
-    maxRedirects: 0
+    maxRedirects: 0,
+    headers: {
+      'Content-Length': body_size.toString()
+    }
   }
   axiosRetry(axios, {
     retries
