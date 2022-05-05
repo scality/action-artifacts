@@ -1,6 +1,21 @@
 import * as core from '@actions/core'
 import {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosStatic} from 'axios'
+import {
+  GetResponseDataTypeFromEndpointMethod,
+  GetResponseTypeFromEndpointMethod
+} from '@octokit/types'
+import {Octokit} from '@octokit/rest'
 import fs from 'fs'
+
+const octokit = new Octokit()
+
+export type workflowRunResponseType = GetResponseTypeFromEndpointMethod<
+  typeof octokit.actions.getWorkflowRun
+>
+
+export type workflowRunResponseDataType = GetResponseDataTypeFromEndpointMethod<
+  typeof octokit.actions.getWorkflowRun
+>
 
 export function debugAxiosError(error: AxiosError): void {
   const debug: string =

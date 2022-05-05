@@ -42,6 +42,19 @@ inputs:
       Name of the workflow file you want to have the Artifacts name.
     required: false
     default: 'default'
+  args:
+    description: |
+      List of key value pairs to set when indexing metadata on Artifacts
+      Example:
+      args: |
+        key=value
+        foo=bar
+    required: false
+  token:
+    description: |
+      The GitHub Personal Access Token (PAT)
+    default: ${{ github.token }}
+    required: false
 outputs:
   name:
     description: |
@@ -56,3 +69,4 @@ outputs:
 runs:
   using: 'node12'
   main: 'dist/index.js'
+  post: 'dist/index.js'

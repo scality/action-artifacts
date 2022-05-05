@@ -1,0 +1,80 @@
+on:
+  workflow_dispatch:
+  push:
+
+name: test-index
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.artifacts.outputs.name }}
+      branch: ${{ steps.index.outputs.branch }}
+      shortcommit: ${{ steps.index.outputs.shortcommit }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup final status file
+        run: echo -n SUCCESSFUL > .final_status
+      - name: Push final status
+        id: artifacts
+        uses: ./
+        with:
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./.final_status
+          method: upload
+      - name: Setup version
+        uses: ./
+        with:
+          method: index
+          url: https://artifacts.scality.net
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          args: |
+            version=1.0.0-${{ github.run_number }}
+      - name: Setup index outputs
+        id: index
+        run: |
+          echo "::set-output name=branch::${GITHUB_REF/refs\/heads\//}"
+          echo "::set-output name=shortcommit::${GITHUB_SHA::10}"
+
+  test:
+    runs-on: ubuntu-latest
+    needs: setup
+    env:
+      EXPECTED: ${{ needs.setup.outputs.name }}
+    strategy:
+      matrix:
+        test:
+        - key: sha
+          value: ${{ github.sha }}
+        - key: commit
+          value: ${{ github.sha }}
+        - key: version
+          value: '1.0.0-${{ github.run_number }}'
+        - key: branch
+          value: ${{ needs.setup.outputs.branch }}
+        - key: ref
+          value: ${{ github.ref }}
+        - key: actor
+          value: ${{ github.actor }}
+        - key: run_number
+          value: ${{ github.run_number }}
+        - key: shortcommit
+          value: ${{ needs.setup.outputs.shortcommit }}
+    steps:
+    - name: Check list with ${{ matrix.test.key }}
+      run: |
+        RESULT=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} \
+        https://artifacts.scality.net/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }})
+
+        echo $RESULT
+
+        if [ "$RESULT" != "$EXPECTED" ]; then
+          echo "result: $RESULT != $EXPECTED"
+          exit 1
+        else
+          echo SUCCESS!
+        fi
+      shell: bash

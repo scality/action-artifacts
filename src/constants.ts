@@ -6,7 +6,8 @@ export enum Inputs {
   Name = 'name',
   Tag = 'tag',
   Source = 'source',
-  Workflow_name = 'workflow-name'
+  Workflow_name = 'workflow-name',
+  Args = 'args'
 }
 
 export enum Methods {
@@ -14,5 +15,6 @@ export enum Methods {
   Upload = 'upload',
   Prolong = 'prolong',
   Promote = 'promote',
-  Get = 'get'
+  Get = 'get',
+  Index = 'index'
 }

@@ -8,9 +8,11 @@ import {
   artifactsPatternName,
   fileUpload,
   fileVersion,
+  setIndex,
   setNotice,
   setOutputs
 } from './artifacts'
+
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
 import {artifactsRetry} from './utils'
@@ -231,4 +233,21 @@ export async function get(inputs: InputsArtifacts): Promise<void> {
   } else {
     throw Error('Last successful artifacts has not been found')
   }
+}
+
+export async function index(inputs: InputsArtifacts): Promise<void> {
+  const client: AxiosInstance = axios.create({
+    auth: {
+      username: inputs.user,
+      password: inputs.password
+    },
+    httpsAgent: new https.Agent({
+      keepAlive: true,
+      maxSockets: 20
+    })
+  })
+  core.debug(`Indexing args: ${JSON.stringify(inputs.args)}`)
+  core.info(`Setting index...`)
+  await setIndex(client, inputs.url, inputs.args)
+  core.info(`Index has been set`)
 }

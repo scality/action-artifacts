@@ -1,7 +1,8 @@
 import * as core from '@actions/core'
 import * as path from 'path'
 import {Inputs, Methods} from './constants'
-import {get, prolong, promote, setup, upload} from './methods'
+import {get, index, prolong, promote, setup, upload} from './methods'
+import {InputOptions} from '@actions/core'
 import {InputsArtifacts} from './inputs-helper'
 import process from 'process'
 
@@ -18,6 +19,7 @@ export function getInputs(): InputsArtifacts {
   let tag = ''
   let workflow_name = ''
   let name = ''
+  let args: object = {}
 
   const url = core.getInput(Inputs.Url, {required: true})
 
@@ -47,6 +49,9 @@ export function getInputs(): InputsArtifacts {
     method = get
   } else if (method_type === Methods.Setup) {
     method = setup
+  } else if (method_type === Methods.Index) {
+    args = getInputList(Inputs.Args, {required: true})
+    method = index
   } else {
     throw new Error(`Method ${method} does not exist`)
   }
@@ -60,6 +65,22 @@ export function getInputs(): InputsArtifacts {
     method,
     method_type,
     workflow_name,
-    name
+    name,
+    args
   } as InputsArtifacts
+}
+
+export function getInputList(name: string, options?: InputOptions): object {
+  let res: object = {}
+
+  const input: string[] = core.getInput(name, options).split('\n')
+
+  for (const line of input) {
+    const pair: string[] = line.split('=')
+    if (pair.length !== 2) {
+      throw Error(`Syntax on ${line} is incorrect`)
+    }
+    res = {...res, ...{[pair[0]]: pair[1]}}
+  }
+  return res
 }

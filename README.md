@@ -120,6 +120,35 @@ jobs:
           curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-get.outputs.link }}/file1 -o file1
 ```
 
+### Index (beta)
+
+Artifacts index by default the following key:
+* commit
+* shortcommit
+* sha
+* branch
+
+Giving you the ability to list your build Artifacts by branch commits and so on.
+
+Index allow you to set your own key value pairs enabling searching capability with
+parameters that are not indexed by default, and are specific to your repository.
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Artifacts Index
+        uses: ./
+        with:
+          url: my.artifacts.url
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          args: |
+            key=value
+            foo=bar
+```
+
 ## Inputs
 
 This action take the following inputs:
@@ -135,6 +164,7 @@ This input is required.
 * `name`: The name of the artifacts build you will use. Only used with `prolong` and `promote` method.
 * `tag`: The git tag name of the artifacts you are going to promote. To be used with `promote` method.
 * `workflow-name`: Name of the workflow file you want to have the Artifacts name. To be used with `get` method.
+* `args`: A list of key value pairs to use with the Index method.
 
 ## Outputs
 

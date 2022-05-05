@@ -11,4 +11,5 @@ export interface InputsArtifacts {
   tag: string
   source: string
   workflow_name: string
+  args: object
 }
