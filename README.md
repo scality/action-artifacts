@@ -148,6 +148,7 @@ jobs:
           url: my.artifacts.url
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          method: index
           args: |
             key=value
             foo=bar
