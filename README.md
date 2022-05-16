@@ -123,10 +123,14 @@ jobs:
 ### Index (beta)
 
 Artifacts index by default the following key:
-* commit
-* shortcommit
-* sha
+* actor
 * branch
+* commit
+* event_name
+* ref
+* run_number
+* sha (same as commit)
+* shortcommit
 
 Giving you the ability to list your build Artifacts by branch commits and so on.
 
