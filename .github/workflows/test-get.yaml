@@ -14,7 +14,7 @@ jobs:
         id: artifacts-upload
         uses: ./
         with:
-          url: https://artifacts-stag.scality.net
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: .final_status
@@ -25,7 +25,7 @@ jobs:
             -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  \
             --silent --fail --show-error \
             --max-time 3600 \
-            https://artifacts-stag.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
+            https://artifacts.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
 
   test-get-container:
     needs:
@@ -42,7 +42,7 @@ jobs:
         id: artifacts-get
         uses: ./
         with:
-          url: https://artifacts-stag.scality.net
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           workflow-name: test-get
@@ -62,7 +62,7 @@ jobs:
         id: artifacts-get
         uses: ./
         with:
-          url: https://artifacts-stag.scality.net
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           workflow-name: test-get

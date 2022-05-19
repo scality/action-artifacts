@@ -39,7 +39,7 @@ jobs:
       - name: Push all files
         uses: ./
         with:
-          url: https://artifacts-stag.scality.net
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./artifacts

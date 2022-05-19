@@ -19,7 +19,7 @@ jobs:
         id: artifacts
         uses: ./
         with:
-          url: https://artifacts-stag.scality.net
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./.final_status
@@ -28,7 +28,7 @@ jobs:
         uses: ./
         with:
           method: index
-          url: https://artifacts-stag.scality.net
+          url: https://artifacts.scality.net
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           args: |
@@ -67,7 +67,7 @@ jobs:
     - name: Check list with ${{ matrix.test.key }}
       run: |
         RESULT=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} \
-        https://artifacts-stag.scality.net/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }})
+        https://artifacts.scality.net/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }})
 
         echo $RESULT
 
