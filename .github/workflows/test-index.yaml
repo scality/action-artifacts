@@ -12,7 +12,7 @@ jobs:
       branch: ${{ steps.index.outputs.branch }}
       shortcommit: ${{ steps.index.outputs.shortcommit }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup final status file
         run: echo -n SUCCESSFUL > .final_status
       - name: Push final status

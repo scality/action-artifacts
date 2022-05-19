@@ -8,7 +8,7 @@ jobs:
   file-does-not-exist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Push all files
         id: artifacts-test
         continue-on-error: true
@@ -26,7 +26,7 @@ jobs:
   wrong-password:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Push all files
         id: artifacts-test
         continue-on-error: true
@@ -44,7 +44,7 @@ jobs:
   wrong-host:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Push all files
         id: artifacts-test
         continue-on-error: true
