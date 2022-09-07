@@ -153,9 +153,11 @@ function setDefaultIndex(inputs) {
             [refType]: github.context.ref,
             sha,
             event_name: github.context.eventName,
-            actor: github.context.actor,
+            actor: github.context.actor.replace('[bot]', ''),
             run_number: github.context.runNumber
         };
+        core.debug(JSON.stringify(metadata));
+        core.debug(JSON.stringify(actionsMetadata));
         core.info('Uploading default index...');
         yield setIndex(client, inputs.url, metadata);
         yield setIndex(client, inputs.url, actionsMetadata);
@@ -197,7 +199,7 @@ function setIndex(client, url, metadata) {
         };
         const response = yield client.get(metadataUrl, requestConfig);
         if (!response.data.endsWith('PASSED\n')) {
-            throw Error(`Indexing failed`);
+            throw Error(response.data);
         }
         return response;
     });
@@ -700,8 +702,7 @@ function index(inputs) {
                 maxSockets: 20
             })
         });
-        // TODO set as debug instead
-        core.info(JSON.stringify(inputs.args));
+        core.debug(`Indexing args: ${JSON.stringify(inputs.args)}`);
         core.info(`Setting index...`);
         yield (0, artifacts_1.setIndex)(client, inputs.url, inputs.args);
         core.info(`Index has been set`);

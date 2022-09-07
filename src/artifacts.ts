@@ -126,9 +126,11 @@ export async function setDefaultIndex(inputs: InputsArtifacts): Promise<void> {
     [refType]: github.context.ref,
     sha,
     event_name: github.context.eventName,
-    actor: github.context.actor,
+    actor: github.context.actor.replace('[bot]', ''),
     run_number: github.context.runNumber
   }
+  core.debug(JSON.stringify(metadata))
+  core.debug(JSON.stringify(actionsMetadata))
   core.info('Uploading default index...')
   await setIndex(client, inputs.url, metadata)
   await setIndex(client, inputs.url, actionsMetadata)
@@ -186,7 +188,7 @@ export async function setIndex(
   }
   const response: AxiosResponse = await client.get(metadataUrl, requestConfig)
   if (!response.data.endsWith('PASSED\n')) {
-    throw Error(`Indexing failed`)
+    throw Error(response.data)
   }
 
   return response
