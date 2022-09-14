@@ -14,10 +14,7 @@ import {
 
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
-import {
-  artifactsRetry,
-  getCommitSha1,
-} from './utils'
+import {artifactsRetry, getCommitSha1} from './utils'
 import async from 'async'
 import fs from 'fs'
 import https from 'https'
@@ -54,7 +51,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
     )
   }
 
-  let myOutput = await getCommitSha1(inputs.tag)
+  const myOutput = await getCommitSha1(inputs.tag)
   if (!myOutput.includes(artifacts_commit))
     throw Error(
       `Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`
