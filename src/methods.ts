@@ -15,7 +15,10 @@ import {
 
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
 import {InputsArtifacts} from './inputs-helper'
-import {artifactsRetry} from './utils'
+import {
+  artifactsRetry,
+  getCommitSha1,
+} from './utils'
 import async from 'async'
 import fs from 'fs'
 import https from 'https'
@@ -27,14 +30,6 @@ export async function setup(inputs: InputsArtifacts): Promise<void> {
 }
 
 export async function promote(inputs: InputsArtifacts): Promise<void> {
-  let myOutput = ''
-  const options: exec.ExecOptions = {}
-  options.listeners = {
-    stdout: (data: Buffer) => {
-      myOutput += data.toString()
-    }
-  }
-
   const staging_regex = new RegExp(
     '(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$'
   )
@@ -52,8 +47,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
   } else if (promoted_match !== null) {
     core.info('Promoted artifacts has been selected')
     const artifacts_tag = promoted_match[2]
-    await exec.exec('git', ['rev-list', '-n', '1', artifacts_tag], options)
-    artifacts_commit = myOutput
+    artifacts_commit = getCommitSha1(artifacts_tag)
     artifacts_prefix = promoted_match[1]
   } else {
     throw Error(
@@ -61,8 +55,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
     )
   }
 
-  myOutput = ''
-  await exec.exec('git', ['rev-list', '-n', '1', inputs.tag], options)
+  myOutput = getCommitSha1(inputs.tag)
   if (!myOutput.includes(artifacts_commit))
     throw Error(
       `Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`

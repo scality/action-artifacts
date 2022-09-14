@@ -69,3 +69,17 @@ export function artifactsRetry(
     return Promise.reject(error)
   })
 }
+
+export function getCommitSha1(revspec: string): string {
+  let output = ''
+  
+  const options: exec.ExecOptions = {}
+  options.listeners = {
+    stdout: (data: Buffer) => {
+      output += data.toString()
+    }
+  }
+
+  await exec.exec('git', ['rev-list', '-n', '1', revspec], options)
+  return output
+}
