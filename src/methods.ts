@@ -1,5 +1,4 @@
 import * as core from '@actions/core'
-import * as exec from '@actions/exec'
 import * as glob from '@actions/glob'
 import * as path from 'path'
 import * as process from 'process'
@@ -55,7 +54,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
     )
   }
 
-  myOutput = getCommitSha1(inputs.tag)
+  let myOutput = getCommitSha1(inputs.tag)
   if (!myOutput.includes(artifacts_commit))
     throw Error(
       `Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`

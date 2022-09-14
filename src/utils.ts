@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as exec from '@actions/exec'
 import {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosStatic} from 'axios'
 import {
   GetResponseDataTypeFromEndpointMethod,
