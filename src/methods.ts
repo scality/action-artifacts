@@ -13,8 +13,8 @@ import {
 } from './artifacts'
 
 import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
-import {InputsArtifacts} from './inputs-helper'
 import {artifactsRetry, getCommitSha1} from './utils'
+import {InputsArtifacts} from './inputs-helper'
 import async from 'async'
 import fs from 'fs'
 import https from 'https'
