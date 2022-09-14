@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as process from 'process'
 import {
   artifactsRetry,
+  getCommitSha1,
   workflowRunResponseDataType,
   workflowRunResponseType
 } from './utils'
@@ -26,7 +27,7 @@ export async function artifactsName(): Promise<string> {
   const owner: string = github.context.repo.owner
   const repo: string = github.context.repo.repo
   const workflow: string = await workflowName()
-  const commit: string = github.context.sha.slice(0, 10)
+  const commit: string = getCommitSha1('HEAD').slice(0, 10)
   const runNumber: number = github.context.runNumber
 
   return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`
