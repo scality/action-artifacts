@@ -1,7 +1,12 @@
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
+import async from 'async'
+import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
+import fs from 'fs'
+import https from 'https'
 import * as path from 'path'
 import * as process from 'process'
+
 import {
   artifactsName,
   artifactsPatternName,
@@ -11,13 +16,8 @@ import {
   setNotice,
   setOutputs
 } from './artifacts'
-
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
-import {artifactsRetry, getCommitSha1} from './utils'
 import {InputsArtifacts} from './inputs-helper'
-import async from 'async'
-import fs from 'fs'
-import https from 'https'
+import {artifactsRetry, getCommitSha1} from './utils'
 
 export async function setup(inputs: InputsArtifacts): Promise<void> {
   const name: string = await artifactsName()
