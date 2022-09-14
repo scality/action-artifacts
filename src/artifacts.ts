@@ -27,7 +27,11 @@ export async function artifactsName(): Promise<string> {
   const owner: string = github.context.repo.owner
   const repo: string = github.context.repo.repo
   const workflow: string = await workflowName()
-  const commit: string = await getCommitSha1('HEAD').slice(0, 10)
+  const commit: string = await getCommitSha1('HEAD').then(
+    (value) => {
+      return value.slice(0, 10)
+    }
+  )
   const runNumber: number = github.context.runNumber
 
   return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`
@@ -36,7 +40,11 @@ export async function artifactsName(): Promise<string> {
 export async function artifactsPatternName(workflow: string): Promise<string> {
   const owner: string = github.context.repo.owner
   const repo: string = github.context.repo.repo
-  const commit: string = github.context.sha.slice(0, 10)
+  const commit: string = await getCommitSha1('HEAD').then(
+    (value) => {
+      return value.slice(0, 10)
+    }
+  )
   workflow = await workflowName(workflow)
 
   return `github:${owner}:${repo}:staging-${commit}.${workflow}`
