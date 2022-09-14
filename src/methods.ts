@@ -46,7 +46,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
   } else if (promoted_match !== null) {
     core.info('Promoted artifacts has been selected')
     const artifacts_tag = promoted_match[2]
-    artifacts_commit = getCommitSha1(artifacts_tag)
+    artifacts_commit = await getCommitSha1(artifacts_tag)
     artifacts_prefix = promoted_match[1]
   } else {
     throw Error(
@@ -54,7 +54,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
     )
   }
 
-  let myOutput = getCommitSha1(inputs.tag)
+  let myOutput = await getCommitSha1(inputs.tag)
   if (!myOutput.includes(artifacts_commit))
     throw Error(
       `Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`

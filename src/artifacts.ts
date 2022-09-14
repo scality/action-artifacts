@@ -27,7 +27,7 @@ export async function artifactsName(): Promise<string> {
   const owner: string = github.context.repo.owner
   const repo: string = github.context.repo.repo
   const workflow: string = await workflowName()
-  const commit: string = getCommitSha1('HEAD').slice(0, 10)
+  const commit: string = await getCommitSha1('HEAD').slice(0, 10)
   const runNumber: number = github.context.runNumber
 
   return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`

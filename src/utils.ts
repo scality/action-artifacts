@@ -71,7 +71,7 @@ export function artifactsRetry(
   })
 }
 
-export function getCommitSha1(revspec: string): string {
+export async function getCommitSha1(revspec: string): string {
   let output = ''
   
   const options: exec.ExecOptions = {}
