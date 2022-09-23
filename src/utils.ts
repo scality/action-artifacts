@@ -1,5 +1,4 @@
 import * as core from '@actions/core'
-import * as exec from '@actions/exec'
 import {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosStatic} from 'axios'
 import {
   GetResponseDataTypeFromEndpointMethod,
@@ -7,6 +6,8 @@ import {
 } from '@octokit/types'
 import {Octokit} from '@octokit/rest'
 import fs from 'fs'
+import * as git from 'isomorphic-git'
+import {context} from '@actions/github'
 
 const octokit = new Octokit()
 
@@ -72,15 +73,13 @@ export function artifactsRetry(
 }
 
 export async function getCommitSha1(revspec: string): Promise<string> {
-  let output = ''
-
-  const options: exec.ExecOptions = {}
-  options.listeners = {
-    stdout: (data: Buffer) => {
-      output += data.toString()
-    }
+  let sha = ''
+  try {
+    sha = await git.resolveRef({fs, dir: process.cwd(), ref: revspec})
+  } catch (e) {
+    core.error('getCommitSha1 failed, fallback to context.sha')
+    sha = context.sha
   }
 
-  await exec.exec('git', ['rev-list', '-n', '1', revspec], options)
-  return output
+  return sha
 }
