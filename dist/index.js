@@ -61,7 +61,7 @@ function artifactsName() {
         const owner = github.context.repo.owner;
         const repo = github.context.repo.repo;
         const workflow = yield workflowName();
-        const commit = github.context.sha.slice(0, 10);
+        const commit = (yield (0, utils_1.getCommitSha1)('HEAD')).slice(0, 10);
         const runNumber = github.context.runNumber;
         return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`;
     });
@@ -71,7 +71,7 @@ function artifactsPatternName(workflow) {
     return __awaiter(this, void 0, void 0, function* () {
         const owner = github.context.repo.owner;
         const repo = github.context.repo.repo;
-        const commit = github.context.sha.slice(0, 10);
+        const commit = (yield (0, utils_1.getCommitSha1)('HEAD')).slice(0, 10);
         workflow = yield workflowName(workflow);
         return `github:${owner}:${repo}:staging-${commit}.${workflow}`;
     });
@@ -482,16 +482,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.index = exports.get = exports.upload = exports.prolong = exports.promote = exports.setup = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const exec = __importStar(__nccwpck_require__(1514));
 const glob = __importStar(__nccwpck_require__(8090));
+const async_1 = __importDefault(__nccwpck_require__(7888));
+const axios_1 = __importDefault(__nccwpck_require__(6545));
+const fs_1 = __importDefault(__nccwpck_require__(5747));
+const https_1 = __importDefault(__nccwpck_require__(7211));
 const path = __importStar(__nccwpck_require__(5622));
 const process = __importStar(__nccwpck_require__(1765));
 const artifacts_1 = __nccwpck_require__(5671);
-const axios_1 = __importDefault(__nccwpck_require__(6545));
 const utils_1 = __nccwpck_require__(918);
-const async_1 = __importDefault(__nccwpck_require__(7888));
-const fs_1 = __importDefault(__nccwpck_require__(5747));
-const https_1 = __importDefault(__nccwpck_require__(7211));
 function setup(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const name = yield (0, artifacts_1.artifactsName)();
@@ -501,13 +500,6 @@ function setup(inputs) {
 exports.setup = setup;
 function promote(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        let myOutput = '';
-        const options = {};
-        options.listeners = {
-            stdout: (data) => {
-                myOutput += data.toString();
-            }
-        };
         const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$');
         const promoted_regex = new RegExp('(^[^/]+:)promoted-([^/]+)$');
         const staging_match = inputs.name.match(staging_regex);
@@ -522,15 +514,13 @@ function promote(inputs) {
         else if (promoted_match !== null) {
             core.info('Promoted artifacts has been selected');
             const artifacts_tag = promoted_match[2];
-            yield exec.exec('git', ['rev-list', '-n', '1', artifacts_tag], options);
-            artifacts_commit = myOutput;
+            artifacts_commit = yield (0, utils_1.getCommitSha1)(artifacts_tag);
             artifacts_prefix = promoted_match[1];
         }
         else {
             throw Error("This artifacts doesn't match Scality's artifacts naming standards");
         }
-        myOutput = '';
-        yield exec.exec('git', ['rev-list', '-n', '1', inputs.tag], options);
+        const myOutput = yield (0, utils_1.getCommitSha1)(inputs.tag);
         if (!myOutput.includes(artifacts_commit))
             throw Error(`Tag commit ${artifacts_commit} don't match the artifacts commit ${myOutput}`);
         const promoted_name = `${artifacts_prefix}promoted-${inputs.tag}`;
@@ -750,8 +740,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.artifactsRetry = exports.exponentialDelay = exports.retryArtifacts = exports.debugAxiosError = void 0;
+exports.getCommitSha1 = exports.artifactsRetry = exports.exponentialDelay = exports.retryArtifacts = exports.debugAxiosError = void 0;
 const core = __importStar(__nccwpck_require__(2186));
+const exec = __importStar(__nccwpck_require__(1514));
 const rest_1 = __nccwpck_require__(5375);
 const fs_1 = __importDefault(__nccwpck_require__(5747));
 const octokit = new rest_1.Octokit();
@@ -797,6 +788,20 @@ function artifactsRetry(client, retries = 10) {
     }));
 }
 exports.artifactsRetry = artifactsRetry;
+function getCommitSha1(revspec) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let output = '';
+        const options = {};
+        options.listeners = {
+            stdout: (data) => {
+                output += data.toString();
+            }
+        };
+        yield exec.exec('git', ['rev-list', '-n', '1', revspec], options);
+        return output;
+    });
+}
+exports.getCommitSha1 = getCommitSha1;
 
 
 /***/ }),

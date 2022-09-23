@@ -73,7 +73,7 @@ export function artifactsRetry(
 
 export async function getCommitSha1(revspec: string): Promise<string> {
   let output = ''
-  
+
   const options: exec.ExecOptions = {}
   options.listeners = {
     stdout: (data: Buffer) => {
