@@ -793,7 +793,13 @@ function getCommitSha1(revspec) {
     return __awaiter(this, void 0, void 0, function* () {
         let sha = '';
         try {
-            sha = yield git.resolveRef({ fs: fs_1.default, dir: process.cwd(), ref: revspec });
+            const commits = yield git.log({
+                fs: fs_1.default,
+                dir: process.cwd(),
+                ref: revspec,
+                depth: 1
+            });
+            sha = commits[0].oid;
         }
         catch (e) {
             core.error('getCommitSha1 failed, fallback to context.sha');

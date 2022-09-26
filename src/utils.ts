@@ -75,7 +75,13 @@ export function artifactsRetry(
 export async function getCommitSha1(revspec: string): Promise<string> {
   let sha = ''
   try {
-    sha = await git.resolveRef({fs, dir: process.cwd(), ref: revspec})
+    const commits = await git.log({
+      fs,
+      dir: process.cwd(),
+      ref: revspec,
+      depth: 1
+    })
+    sha = commits[0].oid
   } catch (e) {
     core.error('getCommitSha1 failed, fallback to context.sha')
     sha = context.sha
