@@ -83,7 +83,7 @@ export async function getCommitSha1(revspec: string): Promise<string> {
     })
     sha = commits[0].oid
   } catch (e) {
-    core.error('getCommitSha1 failed, fallback to context.sha')
+    core.debug('getCommitSha1 failed, fallback to context.sha')
     sha = context.sha
   }
 
