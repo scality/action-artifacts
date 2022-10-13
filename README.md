@@ -33,16 +33,18 @@ jobs:
 
 ### Upload
 
-Upload files to artifacts.
+Upload files or directories to artifacts.
 
 Example:
+
+#### Uploading a directory to artifacts
 
 ```yaml
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Upload files to artifacts
+      - name: Upload a directory to artifacts
         id: artifacts
         uses: scality/action-artifacts@v3
         with:
@@ -50,9 +52,29 @@ jobs:
           url: my.artifacts.url
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
-          source: ./file1 ./file2 ./dir1
+          source: ./mydirectory
       - run: |
-          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.link }}/file1 -o file1
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.link }}/file_inside_directory -o file
+```
+
+#### Uploading a file to artifacts
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload a file to artifacts
+        id: artifacts
+        uses: scality/action-artifacts@v3
+        with:
+          method: upload
+          url: my.artifacts.url
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./myfile
+      - run: |
+          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts.outputs.link }}/myfile -o myfile
 ```
 
 ### Promote
