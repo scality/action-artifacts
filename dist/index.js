@@ -391,9 +391,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
-const coreCommand = __importStar(__nccwpck_require__(7351));
+const fs = __importStar(__nccwpck_require__(5747));
+const os = __importStar(__nccwpck_require__(2087));
 const inputs_artifacts_1 = __nccwpck_require__(910);
 const artifacts_1 = __nccwpck_require__(5671);
 function run(inputs) {
@@ -426,7 +428,12 @@ if (!IsPost) {
     run(inputs);
     // Publish a variable so that when the POST action runs, it can determine it should run the post logic.
     // This is necessary since we don't have a separate entry point
-    coreCommand.issueCommand('save-state', { name: 'isPost' }, 'true');
+    let GH_STATE_FILE = '';
+    if ((_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.GITHUB_STATE) {
+        //appendFileSync only accepts string, not 'undefined'.
+        GH_STATE_FILE = process.env.GITHUB_STATE;
+    }
+    fs.appendFileSync(GH_STATE_FILE, `isPost=true${os.EOL}`, { encoding: 'utf8' });
 }
 // Post
 else {
