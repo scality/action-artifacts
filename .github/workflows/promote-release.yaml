@@ -24,7 +24,6 @@ jobs:
         method: get
 
     - name: Artifacts Promote
-      id: artifacts-promote-2
       uses: ./
       with:
         url: https://artifacts.scality.net
