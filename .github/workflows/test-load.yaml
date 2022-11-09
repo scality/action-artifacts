@@ -33,7 +33,7 @@ jobs:
     container: ${{ matrix.test.container }}
     name: load tests on ${{ matrix.test.name }}
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: create multiple files
         run: |
           mkdir -p artifacts/${{ matrix.test.name }}

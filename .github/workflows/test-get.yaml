@@ -14,7 +14,7 @@ jobs:
     environment: ${{ inputs.environment || 'production' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: echo -n "SUCCESSFUL" > .final_status
       - name: Artifacts Upload
         id: artifacts-upload
@@ -40,7 +40,7 @@ jobs:
     container:
       image: 'ubuntu:20.04'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: update
         run: apt-get update
       - run: apt-get install -y curl
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Get Artifacts
         id: artifacts-get
         uses: ./

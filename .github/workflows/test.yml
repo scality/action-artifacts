@@ -35,7 +35,7 @@ jobs:
           GITHUB_API_ENABLED: true
           GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Waiting for cloudserver to boot
         run: |
           ret=0

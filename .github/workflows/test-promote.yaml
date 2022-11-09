@@ -52,7 +52,7 @@ jobs:
           AWS_ACCESS_KEY_ID: accessKey1
           AWS_BUCKET_PREFIX: artifacts
           ENDPOINT_URL: http://localhost:8080
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: echo SUCCESS > .final_status
       - name: Artifacts Upload
         id: artifacts-upload
