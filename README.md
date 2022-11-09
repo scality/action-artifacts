@@ -200,5 +200,26 @@ This action will output the following variables:
 * `name`: Will contain a generated name for the artifacts that will be used for a workflow. Each workflow will have a unique artifact name which can be shared among the jobs that are within.
 * `link`: The full url in which artifacts will be stored.
 
+## Scenarios
+
+You will find some interactive workflow files to demonstrate scenarios
+that are possibles when combining multiple methods or
+GitHub Actions features with this Action.
+
+### Sharing an artifact to two different job
+
+When inside a workflow where you upload a content into Artifacts and
+want to retrieve this content into another job inside the same workflow
+you can use action and job `outputs` to achieve this.
+
+Checkout the [share-artifacts.yaml](./.github/workflows/share-artifacts.yaml) workflow file.
+
+### Promote a build when a tag is created
+
+When a tag is created on the repository and you want to automatically
+promote a build from a specific workflow, combine the `on.push.tags`
+event along with the `get` and `promote` method on Artifacts.
+
+Checkout the [promote-release.yaml](./.github/workflows/promote-release.yaml) workflow file.
 
 [Artifacts]: https://github.com/scality/artifacts
