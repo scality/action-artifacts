@@ -212,7 +212,7 @@ When inside a workflow where you upload a content into Artifacts and
 want to retrieve this content into another job inside the same workflow
 you can use action and job `outputs` to achieve this.
 
-Checkout the [share-artifacts.yaml](./.github/workflows/share-artifacts.yaml) workflow file.
+Checkout the [share-artifacts.yaml] workflow file.
 
 ### Promote a build when a tag is created
 
@@ -220,6 +220,8 @@ When a tag is created on the repository and you want to automatically
 promote a build from a specific workflow, combine the `on.push.tags`
 event along with the `get` and `promote` method on Artifacts.
 
-Checkout the [promote-release.yaml](./.github/workflows/promote-release.yaml) workflow file.
+Checkout the [promote-release.yaml] workflow file.
 
 [Artifacts]: https://github.com/scality/artifacts
+[promote-release.yaml]: https://github.com/scality/action-artifacts/blob/HEAD/.github/workflows/promote-release.yaml
+[share-artifacts.yaml]: https://github.com/scality/action-artifacts/blob/HEAD/.github/workflows/share-artifacts.yaml
