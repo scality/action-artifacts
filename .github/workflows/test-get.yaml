@@ -2,10 +2,16 @@
 name: test-get
 
 on:
-  - push
+  push: {}
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 jobs:
   upload:
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
