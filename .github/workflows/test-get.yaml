@@ -2,10 +2,16 @@
 name: test-get
 
 on:
-  - push
+  push: {}
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 jobs:
   upload:
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -26,7 +32,6 @@ jobs:
             --silent --fail --show-error \
             --max-time 3600 \
             https://artifacts.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
-
   test-get-container:
     needs:
       - upload
