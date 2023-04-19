@@ -2,11 +2,17 @@
 name: test-promote
 
 on:
-  - push
+  push: {}
+  workflow_dispatch:
+￼   inputs:
+￼     environment:
+￼       type: environment
+￼       default: production
 
 jobs:
   test-promote:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     env:
       ARTIFACTS_URL: http://localhost:8000
     services:
