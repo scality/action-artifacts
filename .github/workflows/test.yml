@@ -2,16 +2,11 @@ name: 'build-test'
 
 on:
   push: {}
-  workflow_dispatch:
-￼   inputs:
-￼     environment:
-￼       type: environment
-￼       default: production
+  workflow_dispatch: {}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     env:
       INPUT_URL: http://localhost:8080
       INPUT_USER: ${{ secrets.ARTIFACTS_USER }}

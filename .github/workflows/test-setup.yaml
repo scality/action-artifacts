@@ -1,18 +1,25 @@
 ---
 name: test-setup
 
-on: push
+on:
+  push: {}
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 jobs:
   test-setup:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     steps:
       - uses: actions/checkout@v2
       - name: Artifacts Setup
         id: artifacts-setup
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           method: setup

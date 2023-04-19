@@ -2,11 +2,17 @@
 name: test-prolong
 
 on:
-  - push
+  push: {}
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 jobs:
   test-prolong:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     steps:
       - uses: actions/checkout@v2
       - run: echo -n SUCCESSFUL > .final_status
@@ -14,7 +20,7 @@ jobs:
         id: artifacts-upload
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: .final_status
@@ -23,7 +29,7 @@ jobs:
         id: artifacts-prolong
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           name: ${{ steps.artifacts-upload.outputs.name }}

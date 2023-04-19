@@ -1,12 +1,17 @@
 on:
+  push: {}
   workflow_dispatch:
-  push:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 name: test-upload
 
 jobs:
   test-upload-multiple-files:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     name: A job that pushes a lot of files on artifacts
     steps:
       - uses: actions/checkout@v2
@@ -15,7 +20,7 @@ jobs:
       - name: Push all files
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./test-files
@@ -23,6 +28,7 @@ jobs:
 
   test-upload-multiple-files-container:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     container: ubuntu
     name: Upload multiple files inside from a container job
     steps:
@@ -33,7 +39,7 @@ jobs:
       - name: Push all files
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./test-files
@@ -41,6 +47,7 @@ jobs:
 
   test-upload-big-file:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     name: A job that push a big file on artifacts
     steps:
       - uses: actions/checkout@v1
@@ -50,7 +57,7 @@ jobs:
         id: artifacts-upload
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./big_file.txt
@@ -62,6 +69,7 @@ jobs:
 
   push-artifacts-action:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     name: A job that push single files on artifacts
     needs: [test-upload-big-file, test-upload-multiple-files]
     steps:
@@ -69,7 +77,7 @@ jobs:
       - id: artifacts-upload
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: action.yaml
@@ -77,7 +85,7 @@ jobs:
       - uses: ./
         with:
           method: upload
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: README.md
@@ -88,8 +96,8 @@ jobs:
       - name: Download file with artifacts-link
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
       - name: Download with  artifacts-url and artifacts-name
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 https://artifacts.scality.net/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
-      - run: NUMBER_OF_FILES=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 https://artifacts.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/?format=text)
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
+      - run: NUMBER_OF_FILES=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/download/${{ steps.artifacts-upload.outputs.name }}/?format=text)
       - name: Verify number of files
         run: $([[ $NUMBER_OF_FILES -le 103 ]])
       - name: Compare files

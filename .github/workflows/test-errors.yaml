@@ -2,11 +2,17 @@
 name: 'Test errors'
 
 on:
-  - push
+  push: {}
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 jobs:
   file-does-not-exist:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     steps:
       - uses: actions/checkout@v1
       - name: Push all files
@@ -14,7 +20,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./test-files
@@ -25,6 +31,7 @@ jobs:
 
   wrong-password:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     steps:
       - uses: actions/checkout@v1
       - name: Push all files
@@ -32,7 +39,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: 'wrong-password'
           source: action.yaml

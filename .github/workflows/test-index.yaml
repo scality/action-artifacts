@@ -1,12 +1,17 @@
 on:
+  push: {}
   workflow_dispatch:
-  push:
+    inputs:
+      environment:
+        type: environment
+        default: production
 
 name: test-index
 
 jobs:
   setup:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     outputs:
       name: ${{ steps.artifacts.outputs.name }}
       branch: ${{ steps.index.outputs.branch }}
@@ -19,7 +24,7 @@ jobs:
         id: artifacts
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: ./.final_status
@@ -28,7 +33,7 @@ jobs:
         uses: ./
         with:
           method: index
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           args: |
@@ -41,6 +46,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     needs: setup
     env:
       EXPECTED: ${{ needs.setup.outputs.name }}
@@ -67,7 +73,7 @@ jobs:
     - name: Check list with ${{ matrix.test.key }}
       run: |
         RESULT=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} \
-        https://artifacts.scality.net/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }})
+        ${{ vars.ARTIFACTS_URL }}/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }})
 
         echo $RESULT
 

@@ -11,7 +11,7 @@ on:
 
 jobs:
   upload:
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || 'production' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -20,7 +20,7 @@ jobs:
         id: artifacts-upload
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: .final_status
@@ -31,11 +31,12 @@ jobs:
             -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  \
             --silent --fail --show-error \
             --max-time 3600 \
-            https://artifacts.scality.net/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
+            ${{ vars.ARTIFACTS_URL }}/download/${{ steps.artifacts-upload.outputs.name }}/.final_status
   test-get-container:
     needs:
       - upload
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     container:
       image: 'ubuntu:20.04'
     steps:
@@ -47,7 +48,7 @@ jobs:
         id: artifacts-get
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           workflow-name: test-get
@@ -61,13 +62,14 @@ jobs:
     needs:
       - upload
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
     steps:
       - uses: actions/checkout@v2
       - name: Get Artifacts
         id: artifacts-get
         uses: ./
         with:
-          url: https://artifacts.scality.net
+          url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           workflow-name: test-get
