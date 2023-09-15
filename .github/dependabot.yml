@@ -3,9 +3,21 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
+    commit-message:
+      prefix: github-actions
+      include: scope
+    labels:
+      - github-actions
+      - dependencies
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: daily
+    commit-message:
+      prefix: npm
+      include: scope
+    labels:
+      - github-actions
+      - dependencies
