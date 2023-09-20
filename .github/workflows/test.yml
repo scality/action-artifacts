@@ -35,7 +35,7 @@ jobs:
           GITHUB_API_ENABLED: true
           GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set Node.js 16.x
         uses: actions/setup-node@v3.6.0
         with:

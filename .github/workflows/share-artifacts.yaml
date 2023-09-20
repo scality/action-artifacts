@@ -14,7 +14,7 @@ jobs:
       artifacts-link: ${{ steps.artifacts.outputs.link }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: artifacts upload
       id: artifacts
       uses: ./
@@ -30,7 +30,7 @@ jobs:
     needs: build
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Retrieve file
       run: |
         curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ needs.build.outputs.artifacts-link }}/action.yaml -o /tmp/action.yaml

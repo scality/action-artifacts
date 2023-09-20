@@ -14,7 +14,7 @@ jobs:
     environment: ${{ inputs.environment || 'production' }}
     name: A job that pushes a lot of files on artifacts
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: create multiple files
         run: mkdir -p test-files && for i in {1..2000}; do dd if=/dev/random of=test-files/$i.txt count=1 bs=1M; done
       - name: Push all files
@@ -32,7 +32,7 @@ jobs:
     container: ubuntu
     name: Upload multiple files inside from a container job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: create multiple files
         run: mkdir -p test-files && for i in {1..2000}; do dd if=/dev/random of=test-files/$i.txt count=1 bs=1M; done
         shell: bash
@@ -50,7 +50,7 @@ jobs:
     environment: ${{ inputs.environment || 'production' }}
     name: A job that push a big file on artifacts
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: create one big file
         run: dd if=/dev/random of=big_file.txt count=1024 bs=1M
       - name: Push on big file
@@ -73,7 +73,7 @@ jobs:
     name: A job that push single files on artifacts
     needs: [test-upload-big-file, test-upload-multiple-files]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: artifacts-upload
         uses: ./
         with:
