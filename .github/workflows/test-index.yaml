@@ -1,5 +1,9 @@
 on:
   push: {}
+  pull_request:
+    branches:
+      - development/*
+      - main
   workflow_dispatch:
     inputs:
       environment:
@@ -7,6 +11,9 @@ on:
         default: production
 
 name: test-index
+
+concurrency:
+  group: ${{ github.workflow }}
 
 jobs:
   setup:
@@ -16,6 +23,7 @@ jobs:
       name: ${{ steps.artifacts.outputs.name }}
       branch: ${{ steps.index.outputs.branch }}
       shortcommit: ${{ steps.index.outputs.shortcommit }}
+      sha: ${{ steps.index.outputs.sha }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup final status file
@@ -41,8 +49,15 @@ jobs:
       - name: Setup index outputs
         id: index
         run: |
-          echo "::set-output name=branch::${GITHUB_REF/refs\/heads\//}"
-          echo "::set-output name=shortcommit::${GITHUB_SHA::10}"
+          echo "branch=${GITHUB_REF/refs\/heads\//}" >> $GITHUB_OUTPUT
+          if [[ ${{ github.event_name }} == "pull_request" ]]; then
+            SHA=${{ github.event.pull_request.head.sha }}
+            echo "sha=$SHA" >> $GITHUB_OUTPUT
+            echo "shortcommit=${SHA::10}" >> $GITHUB_OUTPUT
+          else
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "shortcommit=${GITHUB_SHA::10}" >> $GITHUB_OUTPUT
+          fi
 
   test:
     runs-on: ubuntu-latest
@@ -54,9 +69,9 @@ jobs:
       matrix:
         test:
         - key: sha
-          value: ${{ github.sha }}
+          value: ${{ needs.setup.outputs.sha }}
         - key: commit
-          value: ${{ github.sha }}
+          value: ${{ needs.setup.outputs.sha}}
         - key: version
           value: '1.0.0-${{ github.run_number }}'
         - key: branch

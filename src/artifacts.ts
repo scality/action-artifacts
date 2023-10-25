@@ -108,17 +108,25 @@ export async function setDefaultIndex(inputs: InputsArtifacts): Promise<void> {
       maxSockets: 20
     })
   })
-  const sha: string = github.context.sha
+  let branch: string
+  let sha: string
+
+  if (github.context.eventName === 'pull_request') {
+    branch = github.context.payload.pull_request?.head?.ref as string
+    sha = github.context.payload.pull_request?.head?.sha as string
+  } else {
+    branch = github.context.ref
+      .replace('refs/heads/', '')
+      .replace('refs/tags/', '')
+    sha = github.context.sha
+  }
+  // Is the build reference on a tag or a branch
   const shortSha: string = sha.substring(0, 10)
-  const ref: string = github.context.ref
-    .replace('refs/heads/', '')
-    .replace('refs/tags/', '')
-  // Is the build on a tag or a branch
   const refType: string = process.env['GITHUB_REF_TYPE'] || 'branch'
   const metadata: object = {
     commit: sha,
     shortcommit: shortSha,
-    [refType]: ref
+    branch
   }
   // Adding another set of metadata that are equal to action
   // in terms of key naming or without any modification to the value
