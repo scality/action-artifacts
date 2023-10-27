@@ -33,7 +33,7 @@
     "@octokit/types": "^6.34.0",
     "@types/async": "^3.2.12",
     "async": "^3.2.3",
-    "axios": "^0.24.0",
+    "axios": "^1.6.0",
     "isomorphic-git": "^1.21.0"
   },
   "devDependencies": {
