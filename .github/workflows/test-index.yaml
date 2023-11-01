@@ -88,7 +88,7 @@ jobs:
     - name: Check list with ${{ matrix.test.key }}
       run: |
         RESULT=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} \
-        ${{ vars.ARTIFACTS_URL }}/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }})
+        "${{ vars.ARTIFACTS_URL }}/search/last_success/${{ matrix.test.key }}/github/${{ github.repository }}/${{ github.workflow }}/${{ matrix.test.value }}")
 
         echo $RESULT
 
