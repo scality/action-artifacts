@@ -21,7 +21,7 @@ async function post(inputs: InputsArtifacts): Promise<void> {
 }
 
 const inputs = getInputs()
-const IsPost = !!process.env['STATE_isPost']
+const IsPost = !!core.getState('isPost')
 
 // Main
 if (!IsPost) {
