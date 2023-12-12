@@ -24,6 +24,7 @@ jobs:
       branch: ${{ steps.index.outputs.branch }}
       shortcommit: ${{ steps.index.outputs.shortcommit }}
       sha: ${{ steps.index.outputs.sha }}
+      actor: ${{ steps.index.outputs.actor }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup final status file
@@ -58,6 +59,8 @@ jobs:
             echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
             echo "shortcommit=${GITHUB_SHA::10}" >> $GITHUB_OUTPUT
           fi
+          # remove [bot] from actor name
+          echo "actor=${GITHUB_ACTOR/\[bot\]/}" >> $GITHUB_OUTPUT
 
   test:
     runs-on: ubuntu-latest
@@ -79,7 +82,7 @@ jobs:
         - key: ref
           value: ${{ github.ref }}
         - key: actor
-          value: ${{ github.actor }}
+          value: ${{ needs.setup.outputs.actor }}
         - key: run_number
           value: ${{ github.run_number }}
         - key: shortcommit

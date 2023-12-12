@@ -51,18 +51,20 @@ const utils_1 = __nccwpck_require__(918);
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const https_1 = __importDefault(__nccwpck_require__(5687));
-const workflowName = (workflow) => __awaiter(void 0, void 0, void 0, function* () {
-    if (workflow === undefined) {
-        workflow = github.context.workflow;
-    }
-    return workflow.replace(/\W/g, '-').replace(/^-/, '');
-});
+function workflowName(workflow) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (workflow === undefined) {
+            workflow = github.context.workflow;
+        }
+        return workflow.replace(/\W/g, '-').replace(/^-/, '');
+    });
+}
 exports.workflowName = workflowName;
 function artifactsName() {
     return __awaiter(this, void 0, void 0, function* () {
         const owner = github.context.repo.owner;
         const repo = github.context.repo.repo;
-        const workflow = yield (0, exports.workflowName)();
+        const workflow = yield workflowName();
         const commit = (yield (0, utils_1.getCommitSha1)('HEAD')).slice(0, 10);
         const runNumber = github.context.runNumber;
         return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`;
@@ -74,7 +76,7 @@ function artifactsPatternName(workflow) {
         const owner = github.context.repo.owner;
         const repo = github.context.repo.repo;
         const commit = (yield (0, utils_1.getCommitSha1)('HEAD')).slice(0, 10);
-        workflow = yield (0, exports.workflowName)(workflow);
+        workflow = yield workflowName(workflow);
         return `github:${owner}:${repo}:staging-${commit}.${workflow}`;
     });
 }
@@ -137,8 +139,8 @@ function setDefaultIndex(inputs) {
                 maxSockets: 20
             })
         });
-        var branch;
-        var sha;
+        let branch;
+        let sha;
         if (github.context.eventName === 'pull_request') {
             branch = (_b = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head) === null || _b === void 0 ? void 0 : _b.ref;
             sha = (_d = (_c = github.context.payload.pull_request) === null || _c === void 0 ? void 0 : _c.head) === null || _d === void 0 ? void 0 : _d.sha;
@@ -155,7 +157,7 @@ function setDefaultIndex(inputs) {
         const metadata = {
             commit: sha,
             shortcommit: shortSha,
-            branch: branch
+            branch
         };
         // Adding another set of metadata that are equal to action
         // in terms of key naming or without any modification to the value
@@ -194,7 +196,7 @@ function setIndex(client, url, metadata) {
         const owner = github.context.repo.owner.toLowerCase();
         const repo = github.context.repo.repo.toLowerCase();
         const name = yield artifactsName();
-        const workflow = yield (0, exports.workflowName)();
+        const workflow = yield workflowName();
         const workflowRun = yield getWorkflowRun();
         const createdAt = workflowRun.created_at;
         const metadataUrl = new URL(path.join('/add_metadata/', 'github', owner, repo, workflow, createdAt, name), url)
