@@ -13,7 +13,7 @@ on:
 name: test-index
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
 
 jobs:
   setup:
