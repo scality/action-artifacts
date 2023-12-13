@@ -31,8 +31,8 @@
     "@actions/glob": "^0.4.0",
     "@octokit/rest": "^18.12.0",
     "@octokit/types": "^12.4.0",
-    "@types/async": "^3.2.12",
-    "async": "^3.2.3",
+    "@types/async": "^3.2.24",
+    "async": "^3.2.5",
     "axios": "^0.24.0",
     "isomorphic-git": "^1.25.1"
   },
