@@ -67,6 +67,6 @@ outputs:
       The full url in which artifacts will be stored.
     value: ${{ steps.artifacts.outputs.link }}
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
   post: 'dist/index.js'
