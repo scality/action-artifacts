@@ -1,0 +1,49 @@
+---
+services:
+  cloudserver-front:
+    image: zenko/cloudserver:8.1.2
+    environment:
+      REMOTE_MANAGEMENT_DISABLE: '1'
+      LOG_LEVEL: debug
+      ENDPOINT: cloudserver-front
+    ports:
+      - 8000:8000
+  fake-github-url:
+    image: ghcr.io/scality/artifacts/fake-github:d7c5ea721f9cf34a89907681a2e17eec9051426b
+  artifacts:
+    image: ghcr.io/scality/artifacts/artifacts:d7c5ea721f9cf34a89907681a2e17eec9051426b
+    depends_on:
+      - cloudserver-front
+      - fake-github-url
+    ports:
+      - 8080:80
+    environment:
+      AWS_SECRET_ACCESS_KEY: verySecretKey1
+      AWS_ACCESS_KEY_ID: accessKey1
+      AWS_BUCKET_PREFIX: artifacts
+      ENDPOINT_URL: http://cloudserver-front:8000
+      AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
+      ARTIFACTS_URL: http://artifacts
+      GITHUB_API_URL: http://fake-github-url:5050
+      GITHUB_API_COMPANY: scality
+      GITHUB_API_ENABLED: true
+      GITHUB_USER_ALLOWED_UPLOAD: username-pass
+      BOT_USERNAME: botuser
+      BOT_TOKEN: botpass
+  buckets:
+    build: __tests__/images/buckets
+    depends_on:
+      - cloudserver-front
+      - artifacts
+      - fake-github-url
+    environment:
+      AWS_SECRET_ACCESS_KEY: verySecretKey1
+      AWS_ACCESS_KEY_ID: accessKey1
+      AWS_ENDPOINT_URL: http://cloudserver-front:8000
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - buckets:/buckets
+
+volumes:
+  buckets:
+    driver: local
