@@ -21,7 +21,7 @@ export type workflowRunResponseDataType = GetResponseDataTypeFromEndpointMethod<
 
 export function debugAxiosError(error: AxiosError): void {
   const debug: string =
-    `Request on ${error.config.url} failed with ` +
+    `Request on ${error.config?.url ?? 'unknown'} failed with ` +
     `code: ${error.code} ` +
     `status: ${error.response?.status} ` +
     `data: ${error.response?.data}`
@@ -50,7 +50,7 @@ export function artifactsRetry(
   const maxRetry: number = retries
   client.interceptors.response.use(undefined, async (error: AxiosError) => {
     debugAxiosError(error)
-    const config: AxiosRequestConfig = error.config
+    const config: AxiosRequestConfig = error.config || {}
     if (counter < maxRetry && retryArtifacts(error)) {
       const delay: number = exponentialDelay(counter)
       counter++
