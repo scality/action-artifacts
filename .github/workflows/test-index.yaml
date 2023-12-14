@@ -1,5 +1,8 @@
 on:
-  push: {}
+  push:
+    branches:
+      - main
+      - development/*
   pull_request:
     branches:
       - development/*
