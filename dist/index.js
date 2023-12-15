@@ -210,7 +210,7 @@ function setIndex(client, url, metadata) {
                 return status === 200;
             }
         };
-        (0, utils_1.artifactsRetry)(client, 10);
+        (0, utils_1.artifactsIndexRequestRetry)(client, 10);
         return yield client.get(metadataUrl, requestConfig);
     });
 }
@@ -768,7 +768,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getCommitSha1 = exports.artifactsRetry = exports.exponentialDelay = exports.retryArtifacts = exports.debugAxiosError = void 0;
+exports.getCommitSha1 = exports.artifactsIndexRequestRetry = exports.artifactsRetry = exports.exponentialDelay = exports.retryArtifacts = exports.debugAxiosError = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const rest_1 = __nccwpck_require__(5375);
 const fs_1 = __importDefault(__nccwpck_require__(7147));
@@ -785,17 +785,9 @@ function debugAxiosError(error) {
 }
 exports.debugAxiosError = debugAxiosError;
 function retryArtifacts(error) {
-    var _a, _b;
-    if (error.request.url.includes('add_metadata')) {
-        core.info('Verifying if request on add_metadata has been successful');
-        return (((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 200 &&
-            ((_b = error.response) === null || _b === void 0 ? void 0 : _b.data).endsWith('PASSED\n'));
-    }
-    else {
-        return (error.code !== 'ECONNABORTED' &&
-            (!error.response ||
-                (error.response.status >= 500 && error.response.status <= 599)));
-    }
+    return (error.code !== 'ECONNABORTED' &&
+        (!error.response ||
+            (error.response.status >= 500 && error.response.status <= 599)));
 }
 exports.retryArtifacts = retryArtifacts;
 function exponentialDelay(retryNumber = 0) {
@@ -825,6 +817,29 @@ function artifactsRetry(client, retries = 10) {
     }));
 }
 exports.artifactsRetry = artifactsRetry;
+function artifactsIndexRequestRetry(client, retries = 10) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let counter = 0;
+        const maxRetry = retries;
+        client.interceptors.response.use((response) => __awaiter(this, void 0, void 0, function* () {
+            const status = response === null || response === void 0 ? void 0 : response.status;
+            const data = response === null || response === void 0 ? void 0 : response.data;
+            const config = (response === null || response === void 0 ? void 0 : response.config) || {};
+            if (status === 200 && data.endsWith('PASSED\n')) {
+                core.info('Index request succeeded');
+                return Promise.resolve(response);
+            }
+            else if (counter < maxRetry) {
+                const delay = exponentialDelay(counter);
+                counter++;
+                core.info(`Request on ${config.url} will be retried in ${Math.round(delay)} milliseconds`);
+                return new Promise(resolve => setTimeout(() => resolve(client(config)), delay));
+            }
+            return Promise.reject(response);
+        }), undefined);
+    });
+}
+exports.artifactsIndexRequestRetry = artifactsIndexRequestRetry;
 function getCommitSha1(revspec) {
     return __awaiter(this, void 0, void 0, function* () {
         let sha = '';

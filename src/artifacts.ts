@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as process from 'process'
 import {
   artifactsRetry,
+  artifactsIndexRequestRetry,
   getCommitSha1,
   workflowRunResponseDataType,
   workflowRunResponseType
@@ -195,6 +196,6 @@ export async function setIndex(
       return status === 200
     }
   }
-  artifactsRetry(client, 10)
+  artifactsIndexRequestRetry(client, 10)
   return await client.get(metadataUrl, requestConfig)
 }

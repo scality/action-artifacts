@@ -1,5 +1,11 @@
 import * as core from '@actions/core'
-import {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosStatic} from 'axios'
+import {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosStatic,
+  AxiosResponse
+} from 'axios'
 import {
   GetResponseDataTypeFromEndpointMethod,
   GetResponseTypeFromEndpointMethod
@@ -29,19 +35,11 @@ export function debugAxiosError(error: AxiosError): void {
 }
 
 export function retryArtifacts(error: AxiosError): boolean {
-  if (error.request.url.includes('add_metadata')) {
-    core.info('Verifying if request on add_metadata has been successful')
-    return (
-      error.response?.status === 200 &&
-      (error.response?.data as string).endsWith('PASSED\n')
-    )
-  } else {
-    return (
-      error.code !== 'ECONNABORTED' &&
-      (!error.response ||
-        (error.response.status >= 500 && error.response.status <= 599))
-    )
-  }
+  return (
+    error.code !== 'ECONNABORTED' &&
+    (!error.response ||
+      (error.response.status >= 500 && error.response.status <= 599))
+  )
 }
 
 export function exponentialDelay(retryNumber = 0): number {
@@ -78,6 +76,36 @@ export function artifactsRetry(
     }
     return Promise.reject(error)
   })
+}
+
+export async function artifactsIndexRequestRetry(
+  client: AxiosInstance | AxiosStatic,
+  retries = 10
+): Promise<void> {
+  let counter = 0
+  const maxRetry: number = retries
+
+  client.interceptors.response.use(async (response: AxiosResponse) => {
+    const status = response?.status
+    const data = response?.data
+    const config: AxiosRequestConfig = response?.config || {}
+    if (status === 200 && data.endsWith('PASSED\n')) {
+      core.info(`Index request on ${config.url} succeeded`)
+      return Promise.resolve(response)
+    } else if (counter < maxRetry) {
+      const delay: number = exponentialDelay(counter)
+      counter++
+      core.info(
+        `Request on ${config.url} will be retried in ${Math.round(
+          delay
+        )} milliseconds`
+      )
+      return new Promise(resolve =>
+        setTimeout(() => resolve(client(config)), delay)
+      )
+    }
+    return Promise.reject(response)
+  }, undefined)
 }
 
 export async function getCommitSha1(revspec: string): Promise<string> {
