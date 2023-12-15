@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as process from 'process'
 import {
   artifactsRetry,
+  artifactsIndexRequestRetry,
   getCommitSha1,
   workflowRunResponseDataType,
   workflowRunResponseType
@@ -195,10 +196,6 @@ export async function setIndex(
       return status === 200
     }
   }
-  const response: AxiosResponse = await client.get(metadataUrl, requestConfig)
-  if (!response.data.endsWith('PASSED\n')) {
-    throw Error(response.data)
-  }
-
-  return response
+  artifactsIndexRequestRetry(client, 10)
+  return await client.get(metadataUrl, requestConfig)
 }

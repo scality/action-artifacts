@@ -33,5 +33,6 @@ if (!IsPost) {
 
 // Post
 else {
+  core.info('Running post logic')
   post(inputs)
 }

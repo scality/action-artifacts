@@ -36,10 +36,11 @@ jobs:
           GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
     steps:
       - uses: actions/checkout@v3
-      - name: Set Node.js 16.x
+      - name: Set Node.js
         uses: actions/setup-node@v4.0.0
         with:
           node-version: 20.x
+          cache: yarn
       - name: Waiting for cloudserver to boot
         run: |
           ret=0
