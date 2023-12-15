@@ -210,11 +210,8 @@ function setIndex(client, url, metadata) {
                 return status === 200;
             }
         };
-        const response = yield client.get(metadataUrl, requestConfig);
-        if (!response.data.endsWith('PASSED\n')) {
-            throw Error(response.data);
-        }
-        return response;
+        (0, utils_1.artifactsRetry)(client, 10);
+        return yield client.get(metadataUrl, requestConfig);
     });
 }
 exports.setIndex = setIndex;
@@ -450,6 +447,7 @@ if (!IsPost) {
 }
 // Post
 else {
+    core.info('Running post logic');
     post(inputs);
 }
 
@@ -787,9 +785,17 @@ function debugAxiosError(error) {
 }
 exports.debugAxiosError = debugAxiosError;
 function retryArtifacts(error) {
-    return (error.code !== 'ECONNABORTED' &&
-        (!error.response ||
-            (error.response.status >= 500 && error.response.status <= 599)));
+    var _a, _b;
+    if (error.request.url.includes('add_metadata')) {
+        core.info('Verifying if request on add_metadata has been successful');
+        return (((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 200 &&
+            ((_b = error.response) === null || _b === void 0 ? void 0 : _b.data).endsWith('PASSED\n'));
+    }
+    else {
+        return (error.code !== 'ECONNABORTED' &&
+            (!error.response ||
+                (error.response.status >= 500 && error.response.status <= 599)));
+    }
 }
 exports.retryArtifacts = retryArtifacts;
 function exponentialDelay(retryNumber = 0) {

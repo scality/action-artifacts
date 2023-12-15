@@ -29,11 +29,19 @@ export function debugAxiosError(error: AxiosError): void {
 }
 
 export function retryArtifacts(error: AxiosError): boolean {
-  return (
-    error.code !== 'ECONNABORTED' &&
-    (!error.response ||
-      (error.response.status >= 500 && error.response.status <= 599))
-  )
+  if (error.request.url.includes('add_metadata')) {
+    core.info('Verifying if request on add_metadata has been successful')
+    return (
+      error.response?.status === 200 &&
+      (error.response?.data as string).endsWith('PASSED\n')
+    )
+  } else {
+    return (
+      error.code !== 'ECONNABORTED' &&
+      (!error.response ||
+        (error.response.status >= 500 && error.response.status <= 599))
+    )
+  }
 }
 
 export function exponentialDelay(retryNumber = 0): number {

@@ -195,10 +195,6 @@ export async function setIndex(
       return status === 200
     }
   }
-  const response: AxiosResponse = await client.get(metadataUrl, requestConfig)
-  if (!response.data.endsWith('PASSED\n')) {
-    throw Error(response.data)
-  }
-
-  return response
+  artifactsRetry(client, 10)
+  return await client.get(metadataUrl, requestConfig)
 }
