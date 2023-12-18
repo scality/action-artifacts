@@ -3,6 +3,8 @@ on:
   push:
     tags:
     - '**'
+    tags-ignore:
+    - 'v**'
 
 name: promote release
 
