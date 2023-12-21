@@ -654,6 +654,11 @@ function upload(inputs) {
             }
             finally { if (e_1) throw e_1.error; }
         }
+        // if no files are found, log a warning and exit
+        if (requests.length === 0) {
+            core.warning(`No files found for the provided path: ${inputs.source}`);
+            return;
+        }
         yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
             try {
@@ -826,7 +831,7 @@ function artifactsIndexRequestRetry(client, retries = 10) {
             const data = response === null || response === void 0 ? void 0 : response.data;
             const config = (response === null || response === void 0 ? void 0 : response.config) || {};
             if (status === 200 && data.endsWith('PASSED\n')) {
-                core.info('Index request succeeded');
+                core.info(`Index request on ${config.url} succeeded`);
                 return Promise.resolve(response);
             }
             else if (counter < maxRetry) {

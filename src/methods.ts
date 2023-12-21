@@ -170,6 +170,11 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     requests.push(file)
   }
 
+  // if no files are found, log a warning and exit
+  if (requests.length === 0) {
+    core.warning(`No files found for the provided path: ${inputs.source}`)
+    return
+  }
   await async.eachLimit(requests, 16, async (file: string, next) => {
     core.info(`Uploading file: ${file}`)
     try {

@@ -105,3 +105,18 @@ jobs:
       - name: Compate files2
         run: cmp --silent upload_action.yaml ./action.yaml
 
+  test-empty-folder:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    name: A job that try to push an empty folder
+    steps:
+      - uses: actions/checkout@v3
+      - run: mkdir -p artifacts
+      - name: Push all files
+        uses: ./
+        with:
+          url: ${{ vars.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./artifacts
+          method: upload
