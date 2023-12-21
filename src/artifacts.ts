@@ -49,14 +49,14 @@ export async function setOutputs(name: string, url: string): Promise<void> {
 }
 
 export async function setNotice(name: string, url: string): Promise<void> {
+  if (core.summary.isEmptyBuffer()) {
+    await core.summary.addHeading('Artifacts').write()
+  }
   await core.summary
-  .addHeading('Artifacts')
+  .addHeading(`${github.context.action}`, 2)
   .addRaw('Artifacts has been uploaded to the following location:')
-  .addLink(`\`${name}\``, `${url}/builds/${name}`)
+  .addLink(`${name}`, `${url}/builds/${name}`)
   .write()
-  core.info(
-    `::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`
-  )
 }
 
 export async function fileUpload(
