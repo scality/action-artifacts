@@ -90,12 +90,14 @@ function setOutputs(name, url) {
 exports.setOutputs = setOutputs;
 function setNotice(name, url) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (core.summary.isEmptyBuffer()) {
+            yield core.summary.addHeading('Artifacts').write();
+        }
         yield core.summary
-            .addHeading('Artifacts')
+            .addHeading(`${github.context.action}`, 2)
             .addRaw('Artifacts has been uploaded to the following location:')
-            .addLink(`\`${name}\``, `${url}/builds/${name}`)
+            .addLink(`${name}`, `${url}/builds/${name}`)
             .write();
-        core.info(`::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`);
     });
 }
 exports.setNotice = setNotice;
