@@ -66,9 +66,9 @@ export async function setNotice(name: string, url: string, requests?: string[]):
     let directories: string[] = []
 
     for (const file of requests) {
-      const dirname = path.dirname(file)
+      const dirname = path.basename(path.dirname(file))
       if (directories.includes(dirname) === false) {
-        directories.push(`[dirname](${url}/builds/${name}/${dirname})})`)
+        directories.push(`[dirname](${url}/builds/${name}/${dirname})`)
       }
     }
     // then we add the list
