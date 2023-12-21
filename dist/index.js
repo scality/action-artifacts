@@ -104,9 +104,9 @@ function setNotice(name, url, requests) {
         if (requests !== undefined) {
             let directories = [];
             for (const file of requests) {
-                const dirname = path.dirname(file);
+                const dirname = path.basename(path.dirname(file));
                 if (directories.includes(dirname) === false) {
-                    directories.push(`[dirname](${url}/builds/${name}/${dirname})})`);
+                    directories.push(`[dirname](${url}/builds/${name}/${dirname})`);
                 }
             }
             // then we add the list
