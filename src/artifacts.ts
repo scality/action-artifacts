@@ -14,7 +14,6 @@ import {GitHub} from '@actions/github/lib/utils'
 import {InputsArtifacts} from './inputs-helper'
 import fs from 'fs'
 import https from 'https'
-import { dir } from 'console'
 
 export async function workflowName(
   workflow?: string | undefined
@@ -63,19 +62,19 @@ export async function setNotice(name: string, url: string, requests?: string[]):
   // first we retrieve the directories
   if (requests !== undefined) {
 
-    let directories: string[] = []
+    const directories: string[] = []
 
     for (const file of requests) {
       const dirname = path.basename(path.dirname(file))
       if (directories.includes(dirname) === false) {
-        directories.push(`[dirname](${url}/builds/${name}/${dirname})`)
+        directories.push(dirname)
       }
     }
     // then we add the list
-    await core.summary
-      .addHeading('Directories', 3)
-      .addList(directories)
-      .write()
+    await core.summary.addHeading('Directories', 3).write()
+    for (const directory of directories) {
+      await core.summary.addRaw(`- [${directory}](${url}/builds/${name}/${directory})\n`).write()
+    }
   }
 }
 
