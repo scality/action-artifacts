@@ -88,9 +88,9 @@ function setOutputs(name, url) {
     });
 }
 exports.setOutputs = setOutputs;
-function setNotice(name, url) {
+function setNotice(name, url, requests) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (core.summary.isEmptyBuffer()) {
+        if (core.summary.isEmptyBuffer() === true) {
             yield core.summary.addHeading('Artifacts').write();
         }
         yield core.summary
@@ -98,6 +98,23 @@ function setNotice(name, url) {
             .addRaw('Artifacts has been uploaded to the following location:')
             .addLink(`${name}`, `${url}/builds/${name}`)
             .write();
+        // if requests is defined, we add a list with the directories
+        // that have been created within requests.
+        // first we retrieve the directories
+        if (requests !== undefined) {
+            let directories = [];
+            for (const file of requests) {
+                const dirname = path.dirname(file);
+                if (directories.includes(dirname) === false) {
+                    directories.push(`[dirname](${url}/builds/${name}/${dirname})})`);
+                }
+            }
+            // then we add the list
+            yield core.summary
+                .addHeading('Directories', 3)
+                .addList(directories)
+                .write();
+        }
     });
 }
 exports.setNotice = setNotice;
@@ -681,7 +698,7 @@ function upload(inputs) {
         }));
         core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
-        yield (0, artifacts_1.setNotice)(name, inputs.url);
+        yield (0, artifacts_1.setNotice)(name, inputs.url, requests);
     });
 }
 exports.upload = upload;

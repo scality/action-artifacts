@@ -14,6 +14,7 @@ import {GitHub} from '@actions/github/lib/utils'
 import {InputsArtifacts} from './inputs-helper'
 import fs from 'fs'
 import https from 'https'
+import { dir } from 'console'
 
 export async function workflowName(
   workflow?: string | undefined
@@ -48,7 +49,7 @@ export async function setOutputs(name: string, url: string): Promise<void> {
   core.setOutput('link', `${url}/builds/${name}`)
 }
 
-export async function setNotice(name: string, url: string): Promise<void> {
+export async function setNotice(name: string, url: string, requests?: string[]): Promise<void> {
   if (core.summary.isEmptyBuffer() === true) {
     await core.summary.addHeading('Artifacts').write()
   }
@@ -57,6 +58,25 @@ export async function setNotice(name: string, url: string): Promise<void> {
   .addRaw('Artifacts has been uploaded to the following location:')
   .addLink(`${name}`, `${url}/builds/${name}`)
   .write()
+  // if requests is defined, we add a list with the directories
+  // that have been created within requests.
+  // first we retrieve the directories
+  if (requests !== undefined) {
+
+    let directories: string[] = []
+
+    for (const file of requests) {
+      const dirname = path.dirname(file)
+      if (directories.includes(dirname) === false) {
+        directories.push(`[dirname](${url}/builds/${name}/${dirname})})`)
+      }
+    }
+    // then we add the list
+    await core.summary
+      .addHeading('Directories', 3)
+      .addList(directories)
+      .write()
+  }
 }
 
 export async function fileUpload(
