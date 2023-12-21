@@ -88,9 +88,33 @@ function setOutputs(name, url) {
     });
 }
 exports.setOutputs = setOutputs;
-function setNotice(name, url) {
+function setNotice(name, url, requests) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.info(`::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`);
+        if (core.summary.isEmptyBuffer() === true) {
+            yield core.summary.addHeading('Artifacts').write();
+        }
+        yield core.summary
+            .addHeading(`${github.context.action}`, 2)
+            .addRaw('Artifacts has been uploaded to the following location:')
+            .addLink(`${name}`, `${url}/builds/${name}`)
+            .write();
+        // if requests is defined, we add a list with the directories
+        // that have been created within requests.
+        // first we retrieve the directories
+        if (requests !== undefined) {
+            const directories = [];
+            for (const file of requests) {
+                const dirname = path.basename(path.dirname(file));
+                if (directories.includes(dirname) === false) {
+                    directories.push(dirname);
+                }
+            }
+            // then we add the list
+            yield core.summary.addHeading('Directories', 3).write();
+            for (const directory of directories) {
+                yield core.summary.addRaw(`- [${directory}](${url}/builds/${name}/${directory})\n`).write();
+            }
+        }
     });
 }
 exports.setNotice = setNotice;
@@ -674,7 +698,7 @@ function upload(inputs) {
         }));
         core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
-        yield (0, artifacts_1.setNotice)(name, inputs.url);
+        yield (0, artifacts_1.setNotice)(name, inputs.url, requests);
     });
 }
 exports.upload = upload;

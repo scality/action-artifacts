@@ -191,7 +191,7 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
   core.info('All files are uploaded ')
 
   await setOutputs(name, inputs.url)
-  await setNotice(name, inputs.url)
+  await setNotice(name, inputs.url, requests)
 }
 
 export async function get(inputs: InputsArtifacts): Promise<void> {

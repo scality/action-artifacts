@@ -48,10 +48,34 @@ export async function setOutputs(name: string, url: string): Promise<void> {
   core.setOutput('link', `${url}/builds/${name}`)
 }
 
-export async function setNotice(name: string, url: string): Promise<void> {
-  core.info(
-    `::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`
-  )
+export async function setNotice(name: string, url: string, requests?: string[]): Promise<void> {
+  if (core.summary.isEmptyBuffer() === true) {
+    await core.summary.addHeading('Artifacts').write()
+  }
+  await core.summary
+  .addHeading(`${github.context.action}`, 2)
+  .addRaw('Artifacts has been uploaded to the following location:')
+  .addLink(`${name}`, `${url}/builds/${name}`)
+  .write()
+  // if requests is defined, we add a list with the directories
+  // that have been created within requests.
+  // first we retrieve the directories
+  if (requests !== undefined) {
+
+    const directories: string[] = []
+
+    for (const file of requests) {
+      const dirname = path.basename(path.dirname(file))
+      if (directories.includes(dirname) === false) {
+        directories.push(dirname)
+      }
+    }
+    // then we add the list
+    await core.summary.addHeading('Directories', 3).write()
+    for (const directory of directories) {
+      await core.summary.addRaw(`- [${directory}](${url}/builds/${name}/${directory})\n`).write()
+    }
+  }
 }
 
 export async function fileUpload(
