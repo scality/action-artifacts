@@ -49,7 +49,7 @@ export async function setOutputs(name: string, url: string): Promise<void> {
 }
 
 export async function setNotice(name: string, url: string): Promise<void> {
-  if (core.summary.isEmptyBuffer()) {
+  if (core.summary.isEmptyBuffer() === true) {
     await core.summary.addHeading('Artifacts').write()
   }
   await core.summary
