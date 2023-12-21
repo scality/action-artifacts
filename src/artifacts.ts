@@ -49,6 +49,11 @@ export async function setOutputs(name: string, url: string): Promise<void> {
 }
 
 export async function setNotice(name: string, url: string): Promise<void> {
+  await core.summary
+  .addHeading('Artifacts')
+  .addRaw('Artifacts has been uploaded to the following location:')
+  .addLink(`\`${name}\``, `${url}/builds/${name}`)
+  .write()
   core.info(
     `::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`
   )

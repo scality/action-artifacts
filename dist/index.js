@@ -90,6 +90,11 @@ function setOutputs(name, url) {
 exports.setOutputs = setOutputs;
 function setNotice(name, url) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield core.summary
+            .addHeading('Artifacts')
+            .addRaw('Artifacts has been uploaded to the following location:')
+            .addLink(`\`${name}\``, `${url}/builds/${name}`)
+            .write();
         core.info(`::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`);
     });
 }
