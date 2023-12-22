@@ -111,13 +111,18 @@ export async function artifactsIndexRequestRetry(
 export async function getCommitSha1(revspec: string): Promise<string> {
   let sha = ''
   try {
-    const commits = await git.log({
-      fs,
-      dir: process.cwd(),
-      ref: revspec,
-      depth: 1
-    })
-    sha = commits[0].oid
+    if (context.eventName === 'pull_request') {
+      sha = context.payload.pull_request?.head?.sha as string
+    }
+    else {
+      const commits = await git.log({
+        fs,
+        dir: process.cwd(),
+        ref: revspec,
+        depth: 1
+      })
+      sha = commits[0].oid
+    }
   } catch (e) {
     core.debug('getCommitSha1 failed, fallback to context.sha')
     sha = context.sha

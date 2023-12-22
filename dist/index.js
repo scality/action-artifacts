@@ -826,7 +826,7 @@ function artifactsIndexRequestRetry(client, retries = 10) {
             const data = response === null || response === void 0 ? void 0 : response.data;
             const config = (response === null || response === void 0 ? void 0 : response.config) || {};
             if (status === 200 && data.endsWith('PASSED\n')) {
-                core.info('Index request succeeded');
+                core.info(`Index request on ${config.url} succeeded`);
                 return Promise.resolve(response);
             }
             else if (counter < maxRetry) {
@@ -841,16 +841,22 @@ function artifactsIndexRequestRetry(client, retries = 10) {
 }
 exports.artifactsIndexRequestRetry = artifactsIndexRequestRetry;
 function getCommitSha1(revspec) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         let sha = '';
         try {
-            const commits = yield git.log({
-                fs: fs_1.default,
-                dir: process.cwd(),
-                ref: revspec,
-                depth: 1
-            });
-            sha = commits[0].oid;
+            if (github_1.context.eventName === 'pull_request') {
+                sha = (_b = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head) === null || _b === void 0 ? void 0 : _b.sha;
+            }
+            else {
+                const commits = yield git.log({
+                    fs: fs_1.default,
+                    dir: process.cwd(),
+                    ref: revspec,
+                    depth: 1
+                });
+                sha = commits[0].oid;
+            }
         }
         catch (e) {
             core.debug('getCommitSha1 failed, fallback to context.sha');
