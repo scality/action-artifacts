@@ -1,0 +1,35 @@
+---
+on: pull_request
+
+name: Test pull request
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: create file to upload
+        run: |
+          mkdir -p artifacts
+          echo "Hello world" > artifacts/file1.txt
+      - name: Push all files
+        uses: ./
+        id: artifacts
+        with:
+          url: ${{ vars.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./artifacts
+          method: upload
+      - name: Test results
+        run: |
+          SHA=${{ github.event.pull_request.head.sha }}
+          SHORTSHA=${SHA::10}
+          # We expect SHORTSHA to be in the name of the artifact
+          if [[ ${ARTIFACTS_NAME} != *${SHORTSHA}* ]]; then
+            echo "Artifact name ${ARTIFACT_NAME} does not contain the short SHA"
+            exit 1
+          fi
+        env:
+          ARTIFACTS_NAME: ${{ steps.artifacts.outputs.name }}

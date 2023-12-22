@@ -440,7 +440,7 @@ function post(inputs) {
     });
 }
 const inputs = (0, inputs_artifacts_1.getInputs)();
-const IsPost = !!process.env['STATE_isPost'];
+const IsPost = !!core.getState('isPost');
 // Main
 if (!IsPost) {
     run(inputs);
@@ -825,16 +825,22 @@ function artifactsRetry(client, retries = 10) {
 }
 exports.artifactsRetry = artifactsRetry;
 function getCommitSha1(revspec) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         let sha = '';
         try {
-            const commits = yield git.log({
-                fs: fs_1.default,
-                dir: process.cwd(),
-                ref: revspec,
-                depth: 1
-            });
-            sha = commits[0].oid;
+            if (github_1.context.eventName === 'pull_request') {
+                sha = (_b = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head) === null || _b === void 0 ? void 0 : _b.sha;
+            }
+            else {
+                const commits = yield git.log({
+                    fs: fs_1.default,
+                    dir: process.cwd(),
+                    ref: revspec,
+                    depth: 1
+                });
+                sha = commits[0].oid;
+            }
         }
         catch (e) {
             core.debug('getCommitSha1 failed, fallback to context.sha');
@@ -2930,16 +2936,18 @@ exports.create = create;
  * Computes the sha256 hash of a glob
  *
  * @param patterns  Patterns separated by newlines
+ * @param currentWorkspace  Workspace used when matching files
  * @param options   Glob options
+ * @param verbose   Enables verbose logging
  */
-function hashFiles(patterns, options) {
+function hashFiles(patterns, currentWorkspace = '', options, verbose = false) {
     return __awaiter(this, void 0, void 0, function* () {
         let followSymbolicLinks = true;
         if (options && typeof options.followSymbolicLinks === 'boolean') {
             followSymbolicLinks = options.followSymbolicLinks;
         }
         const globber = yield create(patterns, { followSymbolicLinks });
-        return internal_hash_files_1.hashFiles(globber);
+        return internal_hash_files_1.hashFiles(globber, currentWorkspace, verbose);
     });
 }
 exports.hashFiles = hashFiles;
@@ -3299,24 +3307,27 @@ const fs = __importStar(__nccwpck_require__(7147));
 const stream = __importStar(__nccwpck_require__(2781));
 const util = __importStar(__nccwpck_require__(3837));
 const path = __importStar(__nccwpck_require__(1017));
-function hashFiles(globber) {
+function hashFiles(globber, currentWorkspace, verbose = false) {
     var e_1, _a;
     var _b;
     return __awaiter(this, void 0, void 0, function* () {
+        const writeDelegate = verbose ? core.info : core.debug;
         let hasMatch = false;
-        const githubWorkspace = (_b = process.env['GITHUB_WORKSPACE']) !== null && _b !== void 0 ? _b : process.cwd();
+        const githubWorkspace = currentWorkspace
+            ? currentWorkspace
+            : (_b = process.env['GITHUB_WORKSPACE']) !== null && _b !== void 0 ? _b : process.cwd();
         const result = crypto.createHash('sha256');
         let count = 0;
         try {
             for (var _c = __asyncValues(globber.globGenerator()), _d; _d = yield _c.next(), !_d.done;) {
                 const file = _d.value;
-                core.debug(file);
+                writeDelegate(file);
                 if (!file.startsWith(`${githubWorkspace}${path.sep}`)) {
-                    core.debug(`Ignore '${file}' since it is not under GITHUB_WORKSPACE.`);
+                    writeDelegate(`Ignore '${file}' since it is not under GITHUB_WORKSPACE.`);
                     continue;
                 }
                 if (fs.statSync(file).isDirectory()) {
-                    core.debug(`Skip directory '${file}'.`);
+                    writeDelegate(`Skip directory '${file}'.`);
                     continue;
                 }
                 const hash = crypto.createHash('sha256');
@@ -3338,11 +3349,11 @@ function hashFiles(globber) {
         }
         result.end();
         if (hasMatch) {
-            core.debug(`Found ${count} files to hash.`);
+            writeDelegate(`Found ${count} files to hash.`);
             return result.digest('hex');
         }
         else {
-            core.debug(`No matches found for glob`);
+            writeDelegate(`No matches found for glob`);
             return '';
         }
     });
@@ -59249,13 +59260,16 @@ MergeNotSupportedError.code = 'MergeNotSupportedError';
 class MergeConflictError extends BaseError {
   /**
    * @param {Array<string>} filepaths
+   * @param {Array<string>} bothModified
+   * @param {Array<string>} deleteByUs
+   * @param {Array<string>} deleteByTheirs
    */
-  constructor(filepaths) {
+  constructor(filepaths, bothModified, deleteByUs, deleteByTheirs) {
     super(
       `Automatic merge failed with one or more merge conflicts in the following files: ${filepaths.toString()}. Fix conflicts then commit the result.`
     );
     this.code = this.name = MergeConflictError.code;
-    this.data = { filepaths };
+    this.data = { filepaths, bothModified, deleteByUs, deleteByTheirs };
   }
 }
 /** @type {'MergeConflictError'} */
@@ -63250,8 +63264,8 @@ function filterCapabilities(server, client) {
 
 const pkg = {
   name: 'isomorphic-git',
-  version: '1.24.5',
-  agent: 'git/isomorphic-git@1.24.5',
+  version: '1.25.1',
+  agent: 'git/isomorphic-git@1.25.1',
 };
 
 class FIFO {
@@ -63515,6 +63529,9 @@ async function parseUploadPackResponse(stream) {
       } else if (line.startsWith('NAK')) {
         nak = true;
         done = true;
+      } else {
+        done = true;
+        nak = true;
       }
       if (done) {
         resolve({ shallows, unshallows, acks, nak, packfile, progress });
@@ -64815,6 +64832,9 @@ async function mergeTree({
   const theirTree = TREE({ ref: theirOid });
 
   const unmergedFiles = [];
+  const bothModified = [];
+  const deleteByUs = [];
+  const deleteByTheirs = [];
 
   const results = await _walk({
     fs,
@@ -64880,6 +64900,7 @@ async function mergeTree({
             }).then(async r => {
               if (!r.cleanMerge) {
                 unmergedFiles.push(filepath);
+                bothModified.push(filepath);
                 if (!abortOnConflict) {
                   const baseOid = await base.oid();
                   const ourOid = await ours.oid();
@@ -64897,8 +64918,70 @@ async function mergeTree({
               return r.mergeResult
             })
           }
+
+          // deleted by us
+          if (
+            base &&
+            !ours &&
+            theirs &&
+            (await base.type()) === 'blob' &&
+            (await theirs.type()) === 'blob'
+          ) {
+            unmergedFiles.push(filepath);
+            deleteByUs.push(filepath);
+            if (!abortOnConflict) {
+              const baseOid = await base.oid();
+              const theirOid = await theirs.oid();
+
+              index.delete({ filepath });
+
+              index.insert({ filepath, oid: baseOid, stage: 1 });
+              index.insert({ filepath, oid: theirOid, stage: 3 });
+            }
+
+            return {
+              mode: await theirs.mode(),
+              oid: await theirs.oid(),
+              type: 'blob',
+              path,
+            }
+          }
+
+          // deleted by theirs
+          if (
+            base &&
+            ours &&
+            !theirs &&
+            (await base.type()) === 'blob' &&
+            (await ours.type()) === 'blob'
+          ) {
+            unmergedFiles.push(filepath);
+            deleteByTheirs.push(filepath);
+            if (!abortOnConflict) {
+              const baseOid = await base.oid();
+              const ourOid = await ours.oid();
+
+              index.delete({ filepath });
+
+              index.insert({ filepath, oid: baseOid, stage: 1 });
+              index.insert({ filepath, oid: ourOid, stage: 2 });
+            }
+
+            return {
+              mode: await ours.mode(),
+              oid: await ours.oid(),
+              type: 'blob',
+              path,
+            }
+          }
+
+          // deleted by both
+          if (base && !ours && !theirs && (await base.type()) === 'blob') {
+            return undefined
+          }
+
           // all other types of conflicts fail
-          // TODO: Merge conflicts involving deletions/additions
+          // TODO: Merge conflicts involving additions
           throw new MergeNotSupportedError()
         }
       }
@@ -64954,7 +65037,12 @@ async function mergeTree({
         },
       });
     }
-    return new MergeConflictError(unmergedFiles)
+    return new MergeConflictError(
+      unmergedFiles,
+      bothModified,
+      deleteByUs,
+      deleteByTheirs
+    )
   }
 
   return results.oid
