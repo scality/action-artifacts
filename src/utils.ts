@@ -113,8 +113,7 @@ export async function getCommitSha1(revspec: string): Promise<string> {
   try {
     if (context.eventName === 'pull_request') {
       sha = context.payload.pull_request?.head?.sha as string
-    }
-    else {
+    } else {
       const commits = await git.log({
         fs,
         dir: process.cwd(),
