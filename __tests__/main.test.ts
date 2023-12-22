@@ -1,7 +1,7 @@
 import * as process from 'process'
 import * as cp from 'child_process'
 import * as path from 'path'
-import {afterEach, beforeEach, test} from '@jest/globals'
+import {afterEach, beforeEach, test, expect} from '@jest/globals'
 import fs from 'fs'
 import os from 'os'
 
@@ -55,7 +55,10 @@ test('test runs upload', () => {
   const options: cp.ExecFileSyncOptions = {
     env: process.env
   }
-  console.log(cp.execFileSync(np, [ip], options).toString())
+  const output: string = cp.execFileSync(np, [ip], options).toString()
+  console.log(output)
+  // output should not contain the warning mentioning that the file is not found
+  expect(output).not.toContain('No files found for the provided path')
 })
 
 test('test runs upload absolute path', () => {
@@ -101,4 +104,23 @@ test('test runs get method', () => {
     env: process.env
   }
   console.log(cp.execFileSync(np, [ip], options).toString())
+})
+
+test('test runs upload with no file in folder', () => {
+  const workspace: string = process.env['GITHUB_WORKSPACE'] || ''
+  const source: string = 'artifacts'
+  process.env['INPUT_METHOD'] = 'upload'
+
+  fs.mkdirSync(path.join(workspace, source))
+
+  process.env['INPUT_SOURCE'] = source
+
+  const np = process.execPath
+  const ip = path.join(__dirname, '..', 'lib', 'main.js')
+  const options: cp.ExecFileSyncOptions = {
+    env: process.env
+  }
+  const output: string = cp.execFileSync(np, [ip], options).toString()
+  console.log(output)
+  expect(output).toContain('No files found for the provided path')
 })
