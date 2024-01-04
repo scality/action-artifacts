@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Retrieve my artifacts name
         id: artifacts
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           method: setup
           url: my.artifacts.url
@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Upload a directory to artifacts
         id: artifacts
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           method: upload
           url: my.artifacts.url
@@ -66,7 +66,7 @@ jobs:
     steps:
       - name: Upload a file to artifacts
         id: artifacts
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           method: upload
           url: my.artifacts.url
@@ -90,7 +90,7 @@ jobs:
     steps:
       - name: Promote artifacts by name
         id: artifacts
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           method: promote
           url: my.artifacts.url
@@ -114,7 +114,7 @@ jobs:
     steps:
       - name: Artifacts Prolong
         id: artifacts-prolong
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           url: my.artifacts.url
           user: ${{ secrets.ARTIFACTS_USER }}
@@ -131,7 +131,7 @@ jobs:
     steps:
       - name: Artifacts Upload
         id: artifacts-get
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           url: my.artifacts.url
           user: ${{ secrets.ARTIFACTS_USER }}
@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Artifacts Index
-        uses: scality/action-artifacts@v3
+        uses: scality/action-artifacts@v4
         with:
           url: my.artifacts.url
           user: ${{ secrets.ARTIFACTS_USER }}
