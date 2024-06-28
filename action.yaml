@@ -66,6 +66,11 @@ outputs:
     description: |
       The full url in which artifacts will be stored.
     value: ${{ steps.artifacts.outputs.link }}
+  redirect-link:
+    description: |
+      The full url that will redirect clients to a pre-signed S3 url providing data
+      through the S3 bucket instead of the Artifacts service.
+    value: ${{ steps.artifacts.outputs.redirect-link }}
 runs:
   using: 'node20'
   main: 'dist/index.js'

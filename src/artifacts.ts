@@ -46,6 +46,7 @@ export async function artifactsPatternName(workflow: string): Promise<string> {
 export async function setOutputs(name: string, url: string): Promise<void> {
   core.setOutput('name', name)
   core.setOutput('link', `${url}/builds/${name}`)
+  core.setOutput('redirect-link', `${url}/redirect/${name}`)
 }
 
 export async function setNotice(name: string, url: string): Promise<void> {

@@ -199,6 +199,8 @@ This action will output the following variables:
 
 * `name`: Will contain a generated name for the artifacts that will be used for a workflow. Each workflow will have a unique artifact name which can be shared among the jobs that are within.
 * `link`: The full url in which artifacts will be stored.
+* `redirect-link`: The full url that will redirect clients to a pre-signed S3 url
+  providing data through the S3 bucket instead of the Artifacts service.
 
 ## Scenarios
 
