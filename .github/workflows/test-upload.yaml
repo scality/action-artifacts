@@ -95,6 +95,8 @@ jobs:
         run: cmp --silent upload_README.md ./README.md
       - name: Download file with artifacts-link
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
+      - name: Download file with redirect-link
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.redirect-link }}/action.yaml > redirect-link.yaml
       - name: Download with  artifacts-url and artifacts-name
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
       - run: NUMBER_OF_FILES=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/download/${{ steps.artifacts-upload.outputs.name }}/?format=text)
@@ -102,8 +104,10 @@ jobs:
         run: $([[ $NUMBER_OF_FILES -le 103 ]])
       - name: Compare files
         run: cmp --silent upload_action.yaml ./name_action.yaml
-      - name: Compate files2
+      - name: Compare files2
         run: cmp --silent upload_action.yaml ./action.yaml
+      - name: Compare redirect link downloaded file
+        run: cmp --silent redirect-link.yaml action.yaml
 
   test-empty-folder:
     runs-on: ubuntu-latest
