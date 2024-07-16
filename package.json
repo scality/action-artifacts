@@ -34,7 +34,7 @@
     "@types/async": "^3.2.12",
     "async": "^3.2.3",
     "axios": "^1.7.2",
-    "isomorphic-git": "^1.25.9"
+    "isomorphic-git": "^1.27.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.4",
