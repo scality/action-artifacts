@@ -37,7 +37,7 @@
     "isomorphic-git": "^1.27.1"
   },
   "devDependencies": {
-    "@types/node": "^20.14.4",
+    "@types/node": "^22.5.5",
     "@typescript-eslint/parser": "^8.5.0",
     "@vercel/ncc": "^0.38.1",
     "eslint": "^8.57.0",
