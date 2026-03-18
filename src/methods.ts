@@ -11,7 +11,12 @@ import {
   artifactsName,
   artifactsPatternName,
   fileUpload,
+  fileUploadPresigned,
+  fileUploadMultipart,
   fileVersion,
+  probeServerCapabilities,
+  ServerCapabilities,
+  MULTIPART_THRESHOLD,
   setIndex,
   setNotice,
   setOutputs
@@ -121,8 +126,9 @@ async function upload_one_file(
   file: string,
   dirname: string,
   name: string,
-  url: string
-): Promise<AxiosResponse> {
+  url: string,
+  capabilities: ServerCapabilities
+): Promise<void> {
   const run_attempt: string =
     process.env['GITHUB_RUN_ATTEMPT'] === undefined
       ? '1'
@@ -132,11 +138,22 @@ async function upload_one_file(
   if (run_attempt !== '1') {
     await fileVersion(url, name, client, artifactsPath, run_attempt)
   }
-  const uploadUrl: string = new URL(
-    path.join('/upload/', name, artifactsPath),
-    url
-  ).toString()
-  return fileUpload(client, uploadUrl, file)
+
+  const fileSize = fs.statSync(file).size
+  const uploadStart = Date.now()
+  if (fileSize >= MULTIPART_THRESHOLD && capabilities.multipart) {
+    core.info(
+      `Using multipart upload for large file (${Math.round(fileSize / 1e6)} MB): ${file}`
+    )
+    await fileUploadMultipart(client, url, name, file, artifactsPath)
+  } else if (capabilities.presigned) {
+    await fileUploadPresigned(client, url, name, file, artifactsPath)
+  } else {
+    await fileUpload(client, new URL(path.join('/upload/', name, artifactsPath), url).toString(), file)
+  }
+  const elapsed = (Date.now() - uploadStart) / 1000
+  const mbps = (fileSize / 1e6 / elapsed).toFixed(1)
+  core.info(`${artifactsPath} uploaded in ${elapsed.toFixed(1)}s (${mbps} MB/s)`)
 }
 
 export async function upload(inputs: InputsArtifacts): Promise<void> {
@@ -148,9 +165,13 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
       username: inputs.user,
       password: inputs.password
     },
+    // maxSockets must cover the peak connection count:
+    // MULTIPART_CONCURRENCY (4) × FILE_CONCURRENCY (8) = 32.
+    // Setting it below peak causes Node.js to queue excess connections,
+    // which stalls parts waiting for a socket to free up.
     httpsAgent: new https.Agent({
       keepAlive: true,
-      maxSockets: 20
+      maxSockets: 32
     })
   })
 
@@ -176,12 +197,20 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     return
   }
 
+  const capabilities = await probeServerCapabilities(client, inputs.url)
+  core.info(
+    `Server capabilities — presigned: ${capabilities.presigned}, multipart: ${capabilities.multipart}`
+  )
+
+  // Limit concurrent file uploads to 8. Combined with MULTIPART_CONCURRENCY=4,
+  // the peak S3 connection count is 8×4=32, which avoids throttling on
+  // Scaleway Object Storage while still delivering real parallelism gains.
   core.startGroup(`Uploading ${requests.length} files`)
   try {
-    await async.eachLimit(requests, 16, async (file: string, next) => {
+    await async.eachLimit(requests, 8, async (file: string, next) => {
       core.info(`Uploading file: ${file}`)
       try {
-        await upload_one_file(client, file, dirname, name, inputs.url)
+        await upload_one_file(client, file, dirname, name, inputs.url, capabilities)
       } catch (e) {
         if (e instanceof Error) {
           return next(e)

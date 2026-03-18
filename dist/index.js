@@ -42,12 +42,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MULTIPART_THRESHOLD = void 0;
 exports.workflowName = workflowName;
 exports.artifactsName = artifactsName;
 exports.artifactsPatternName = artifactsPatternName;
 exports.setOutputs = setOutputs;
 exports.setNotice = setNotice;
 exports.fileUpload = fileUpload;
+exports.fileUploadPresigned = fileUploadPresigned;
+exports.probeServerCapabilities = probeServerCapabilities;
+exports.fileUploadMultipart = fileUploadMultipart;
 exports.fileVersion = fileVersion;
 exports.setDefaultIndex = setDefaultIndex;
 exports.getWorkflowRun = getWorkflowRun;
@@ -60,6 +64,14 @@ const utils_1 = __nccwpck_require__(918);
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const https_1 = __importDefault(__nccwpck_require__(5687));
+// Files larger than this threshold use multipart upload instead of a single PUT.
+exports.MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MB
+// Each part is 64 MB. Smaller parts reduce the risk of a single stalled TCP
+// stream blocking progress, and give more granular retry surface.
+const MULTIPART_PART_SIZE = 64 * 1024 * 1024; // 64 MB
+// Number of parts uploaded concurrently per file.
+// 4 concurrent parts × 8 concurrent files = 32 peak S3 connections.
+const MULTIPART_CONCURRENCY = 4;
 function workflowName(workflow) {
     return __awaiter(this, void 0, void 0, function* () {
         if (workflow === undefined) {
@@ -118,6 +130,190 @@ function fileUpload(client_1, url_1, file_1) {
         };
         (0, utils_1.artifactsRetry)(client, retries);
         return client.put(url, fileStream, request_config);
+    });
+}
+// Upload a file directly to S3 using a presigned PUT URL obtained from nginx.
+// The data goes runner → S3 without transiting through the nginx proxy.
+function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const presignUrl = new URL(path.join('/presign-upload/', buildName, filePath), baseUrl).toString();
+        const presignResp = yield client.get(presignUrl, { timeout: 30000 });
+        const s3PutUrl = presignResp.data.trim();
+        core.info(`Presigned upload: sending ${file} directly to S3 (bypassing proxy)`);
+        const body_size = fs_1.default.statSync(file).size;
+        const fileStream = fs_1.default.createReadStream(file);
+        // Use raw https.request instead of axios.put to preserve the presigned URL
+        // query string exactly. Axios parses URLs via the URL API which decodes
+        // %2B → + and re-encodes it as + (space in query strings), corrupting the
+        // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
+        const s3Url = new URL(s3PutUrl);
+        yield new Promise((resolve, reject) => {
+            const req = https_1.default.request({
+                method: 'PUT',
+                hostname: s3Url.hostname,
+                port: s3Url.port ? parseInt(s3Url.port) : 443,
+                path: s3Url.pathname + s3Url.search,
+                headers: { 'Content-Length': String(body_size) }
+            }, res => {
+                let body = '';
+                res.on('data', (chunk) => {
+                    body += chunk.toString();
+                });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve();
+                    }
+                    else {
+                        core.error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`);
+                        reject(new Error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`));
+                    }
+                });
+            });
+            req.on('error', reject);
+            fileStream.pipe(req);
+        });
+    });
+}
+// Probe the server once to detect which upload routes are available.
+// Old nginx deployments (e.g. GCP) return 404 for unknown routes; new ones
+// return any other status (200, 400, 401, …) even on invalid probe parameters.
+// Both probes run in parallel to minimise latency.
+function probeServerCapabilities(client, baseUrl) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const probe = (url, params) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const resp = yield client.get(url, {
+                    params,
+                    validateStatus: () => true,
+                    timeout: 10000
+                });
+                return resp.status !== 404;
+            }
+            catch (_a) {
+                return false;
+            }
+        });
+        const [presigned, multipart] = yield Promise.all([
+            probe(new URL('/presign-upload/capability-probe/probe.bin', baseUrl).toString()),
+            probe(new URL('/presign-upload-part/capability-probe/probe.bin', baseUrl).toString(), {
+                partNumber: 1,
+                uploadId: 'probe'
+            })
+        ]);
+        return { presigned, multipart };
+    });
+}
+function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        const fileSize = fs_1.default.statSync(file).size;
+        // 1. Initiate multipart upload → get uploadId from S3 XML response.
+        const partCount = Math.ceil(fileSize / MULTIPART_PART_SIZE);
+        core.info(`Multipart: initiating upload (${partCount} parts) for ${file}`);
+        const initiateUrl = new URL(path.join('/upload-multipart/initiate/', buildName, filePath), baseUrl).toString();
+        const initiateResp = yield client.post(initiateUrl, null, {
+            headers: { 'Content-Length': '0' },
+            timeout: 60000
+        });
+        const uploadId = (_a = initiateResp.data.match(/<UploadId>([^<]+)<\/UploadId>/)) === null || _a === void 0 ? void 0 : _a[1];
+        if (!uploadId) {
+            throw new Error(`Multipart initiate failed for ${file}: could not extract uploadId`);
+        }
+        core.info(`Multipart: initiated, uploadId obtained for ${file}`);
+        // 2. Upload all parts in parallel (MULTIPART_CONCURRENCY at a time).
+        // Each part: GET a presigned S3 URL from the proxy (auth + tiny payload),
+        // then PUT the part body directly to S3 — data bypasses the nginx proxy
+        // and the node NIC entirely.
+        const etags = [];
+        const presignPartBaseUrl = new URL(path.join('/presign-upload-part/', buildName, filePath), baseUrl).toString();
+        const uploadPart = (partNumber) => __awaiter(this, void 0, void 0, function* () {
+            const start = (partNumber - 1) * MULTIPART_PART_SIZE;
+            const end = Math.min(start + MULTIPART_PART_SIZE, fileSize) - 1;
+            const partSize = end - start + 1;
+            core.info(`Multipart: uploading part ${partNumber}/${partCount} (${Math.round(partSize / 1e6)}MB) for ${file}`);
+            // Step 2a — get presigned URL (authenticated, lightweight).
+            const presignResp = yield client.get(presignPartBaseUrl, {
+                params: { partNumber, uploadId },
+                timeout: 30000
+            });
+            const s3PartUrl = presignResp.data.trim();
+            core.info(`Multipart: part ${partNumber}/${partCount} uploading directly to S3 (bypassing proxy): ${new URL(s3PartUrl).hostname}`);
+            // Step 2b — PUT part directly to S3 using raw https.request.
+            // Axios re-encodes presigned URL query strings via the URL API, which
+            // decodes %2B → + and re-serialises it as + (space in query strings).
+            // This corrupts the AWS Signature V2 and causes 403 at Scaleway.
+            // Using https.request preserves the query string exactly as returned
+            // by the proxy.
+            const partStream = fs_1.default.createReadStream(file, { start, end });
+            const s3Url = new URL(s3PartUrl);
+            const etag = yield new Promise((resolve, reject) => {
+                const req = https_1.default.request({
+                    method: 'PUT',
+                    hostname: s3Url.hostname,
+                    port: s3Url.port ? parseInt(s3Url.port) : 443,
+                    path: s3Url.pathname + s3Url.search,
+                    headers: { 'Content-Length': String(partSize) }
+                }, res => {
+                    let body = '';
+                    res.on('data', (chunk) => {
+                        body += chunk.toString();
+                    });
+                    res.on('end', () => {
+                        if (res.statusCode === 200) {
+                            const tag = res.headers['etag'];
+                            if (!tag) {
+                                reject(new Error(`No ETag returned for part ${partNumber} of ${file}`));
+                            }
+                            else {
+                                resolve(tag);
+                            }
+                        }
+                        else {
+                            reject(new Error(`Multipart: part ${partNumber}/${partCount} failed with status ${res.statusCode}: ${body}`));
+                        }
+                    });
+                });
+                req.on('error', reject);
+                partStream.pipe(req);
+            });
+            etags.push({ partNumber, etag });
+            core.info(`Multipart: part ${partNumber}/${partCount} done for ${file}`);
+        });
+        try {
+            const queue = Array.from({ length: partCount }, (_, i) => i + 1);
+            const worker = () => __awaiter(this, void 0, void 0, function* () {
+                while (queue.length > 0) {
+                    const partNumber = queue.shift();
+                    if (partNumber === undefined)
+                        break;
+                    yield uploadPart(partNumber);
+                }
+            });
+            yield Promise.all(Array.from({ length: Math.min(MULTIPART_CONCURRENCY, partCount) }, worker));
+        }
+        catch (e) {
+            // Abort the multipart upload so S3 does not keep orphaned parts.
+            const abortUrl = new URL(path.join('/upload-multipart/abort/', buildName, filePath), baseUrl).toString();
+            try {
+                yield client.delete(abortUrl, { params: { uploadId }, timeout: 60000 });
+            }
+            catch (err) {
+                core.warning(`Multipart abort failed: ${err}`);
+            }
+            throw e;
+        }
+        // 3. Complete the multipart upload with sorted part list.
+        core.info(`Multipart: completing upload for ${file}`);
+        const xml = `<CompleteMultipartUpload>${etags
+            .sort((a, b) => a.partNumber - b.partNumber)
+            .map(p => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`)
+            .join('')}</CompleteMultipartUpload>`;
+        const completeUrl = new URL(path.join('/upload-multipart/complete/', buildName, filePath), baseUrl).toString();
+        yield client.post(completeUrl, xml, {
+            params: { uploadId },
+            headers: { 'Content-Type': 'application/xml' },
+            timeout: 120000
+        });
     });
 }
 function fileVersion(url, name, client, file, build_attempt) {
@@ -599,7 +795,7 @@ function prolong(inputs) {
         yield (0, artifacts_1.setNotice)(artifacts_target, inputs.url);
     });
 }
-function upload_one_file(client, file, dirname, name, url) {
+function upload_one_file(client, file, dirname, name, url, capabilities) {
     return __awaiter(this, void 0, void 0, function* () {
         const run_attempt = process.env['GITHUB_RUN_ATTEMPT'] === undefined
             ? '1'
@@ -608,8 +804,21 @@ function upload_one_file(client, file, dirname, name, url) {
         if (run_attempt !== '1') {
             yield (0, artifacts_1.fileVersion)(url, name, client, artifactsPath, run_attempt);
         }
-        const uploadUrl = new URL(path.join('/upload/', name, artifactsPath), url).toString();
-        return (0, artifacts_1.fileUpload)(client, uploadUrl, file);
+        const fileSize = fs_1.default.statSync(file).size;
+        const uploadStart = Date.now();
+        if (fileSize >= artifacts_1.MULTIPART_THRESHOLD && capabilities.multipart) {
+            core.info(`Using multipart upload for large file (${Math.round(fileSize / 1e6)} MB): ${file}`);
+            yield (0, artifacts_1.fileUploadMultipart)(client, url, name, file, artifactsPath);
+        }
+        else if (capabilities.presigned) {
+            yield (0, artifacts_1.fileUploadPresigned)(client, url, name, file, artifactsPath);
+        }
+        else {
+            yield (0, artifacts_1.fileUpload)(client, new URL(path.join('/upload/', name, artifactsPath), url).toString(), file);
+        }
+        const elapsed = (Date.now() - uploadStart) / 1000;
+        const mbps = (fileSize / 1e6 / elapsed).toFixed(1);
+        core.info(`${artifactsPath} uploaded in ${elapsed.toFixed(1)}s (${mbps} MB/s)`);
     });
 }
 function upload(inputs) {
@@ -623,9 +832,13 @@ function upload(inputs) {
                 username: inputs.user,
                 password: inputs.password
             },
+            // maxSockets must cover the peak connection count:
+            // MULTIPART_CONCURRENCY (4) × FILE_CONCURRENCY (8) = 32.
+            // Setting it below peak causes Node.js to queue excess connections,
+            // which stalls parts waiting for a socket to free up.
             httpsAgent: new https_1.default.Agent({
                 keepAlive: true,
-                maxSockets: 20
+                maxSockets: 32
             })
         });
         if (fs_1.default.statSync(inputs.source).isFile()) {
@@ -660,26 +873,25 @@ function upload(inputs) {
             core.warning(`No files found for the provided path: ${inputs.source}`);
             return;
         }
-        core.startGroup(`Uploading ${requests.length} files`);
-        try {
-            yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
-                core.info(`Uploading file: ${file}`);
-                try {
-                    yield upload_one_file(client, file, dirname, name, inputs.url);
+        const capabilities = yield (0, artifacts_1.probeServerCapabilities)(client, inputs.url);
+        core.info(`Server capabilities — presigned: ${capabilities.presigned}, multipart: ${capabilities.multipart}`);
+        // Limit concurrent file uploads to 8. Combined with MULTIPART_CONCURRENCY=4,
+        // the peak S3 connection count is 8×4=32, which avoids throttling on
+        // Scaleway Object Storage while still delivering real parallelism gains.
+        yield async_1.default.eachLimit(requests, 8, (file, next) => __awaiter(this, void 0, void 0, function* () {
+            core.info(`Uploading file: ${file}`);
+            try {
+                yield upload_one_file(client, file, dirname, name, inputs.url, capabilities);
+            }
+            catch (e) {
+                if (e instanceof Error) {
+                    return next(e);
                 }
-                catch (e) {
-                    if (e instanceof Error) {
-                        return next(e);
-                    }
-                }
-                core.info(`${file} has been uploaded`);
-                next();
-            }));
-        }
-        finally {
-            core.endGroup();
-        }
-        core.info(`All ${requests.length} files are uploaded`);
+            }
+            core.info(`${file} has been uploaded`);
+            next();
+        }));
+        core.info('All files are uploaded ');
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
         yield (0, artifacts_1.setNotice)(name, inputs.url);
     });
@@ -15051,6 +15263,214 @@ function removeHook(state, name, method) {
 
 /***/ }),
 
+/***/ 3717:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var concatMap = __nccwpck_require__(6891);
+var balanced = __nccwpck_require__(9417);
+
+module.exports = expandTop;
+
+var escSlash = '\0SLASH'+Math.random()+'\0';
+var escOpen = '\0OPEN'+Math.random()+'\0';
+var escClose = '\0CLOSE'+Math.random()+'\0';
+var escComma = '\0COMMA'+Math.random()+'\0';
+var escPeriod = '\0PERIOD'+Math.random()+'\0';
+
+function numeric(str) {
+  return parseInt(str, 10) == str
+    ? parseInt(str, 10)
+    : str.charCodeAt(0);
+}
+
+function escapeBraces(str) {
+  return str.split('\\\\').join(escSlash)
+            .split('\\{').join(escOpen)
+            .split('\\}').join(escClose)
+            .split('\\,').join(escComma)
+            .split('\\.').join(escPeriod);
+}
+
+function unescapeBraces(str) {
+  return str.split(escSlash).join('\\')
+            .split(escOpen).join('{')
+            .split(escClose).join('}')
+            .split(escComma).join(',')
+            .split(escPeriod).join('.');
+}
+
+
+// Basically just str.split(","), but handling cases
+// where we have nested braced sections, which should be
+// treated as individual members, like {a,{b,c},d}
+function parseCommaParts(str) {
+  if (!str)
+    return [''];
+
+  var parts = [];
+  var m = balanced('{', '}', str);
+
+  if (!m)
+    return str.split(',');
+
+  var pre = m.pre;
+  var body = m.body;
+  var post = m.post;
+  var p = pre.split(',');
+
+  p[p.length-1] += '{' + body + '}';
+  var postParts = parseCommaParts(post);
+  if (post.length) {
+    p[p.length-1] += postParts.shift();
+    p.push.apply(p, postParts);
+  }
+
+  parts.push.apply(parts, p);
+
+  return parts;
+}
+
+function expandTop(str) {
+  if (!str)
+    return [];
+
+  // I don't know why Bash 4.3 does this, but it does.
+  // Anything starting with {} will have the first two bytes preserved
+  // but *only* at the top level, so {},a}b will not expand to anything,
+  // but a{},b}c will be expanded to [a}c,abc].
+  // One could argue that this is a bug in Bash, but since the goal of
+  // this module is to match Bash's rules, we escape a leading {}
+  if (str.substr(0, 2) === '{}') {
+    str = '\\{\\}' + str.substr(2);
+  }
+
+  return expand(escapeBraces(str), true).map(unescapeBraces);
+}
+
+function identity(e) {
+  return e;
+}
+
+function embrace(str) {
+  return '{' + str + '}';
+}
+function isPadded(el) {
+  return /^-?0\d/.test(el);
+}
+
+function lte(i, y) {
+  return i <= y;
+}
+function gte(i, y) {
+  return i >= y;
+}
+
+function expand(str, isTop) {
+  var expansions = [];
+
+  var m = balanced('{', '}', str);
+  if (!m || /\$$/.test(m.pre)) return [str];
+
+  var isNumericSequence = /^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$/.test(m.body);
+  var isAlphaSequence = /^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$/.test(m.body);
+  var isSequence = isNumericSequence || isAlphaSequence;
+  var isOptions = m.body.indexOf(',') >= 0;
+  if (!isSequence && !isOptions) {
+    // {a},b}
+    if (m.post.match(/,.*\}/)) {
+      str = m.pre + '{' + m.body + escClose + m.post;
+      return expand(str);
+    }
+    return [str];
+  }
+
+  var n;
+  if (isSequence) {
+    n = m.body.split(/\.\./);
+  } else {
+    n = parseCommaParts(m.body);
+    if (n.length === 1) {
+      // x{{a,b}}y ==> x{a}y x{b}y
+      n = expand(n[0], false).map(embrace);
+      if (n.length === 1) {
+        var post = m.post.length
+          ? expand(m.post, false)
+          : [''];
+        return post.map(function(p) {
+          return m.pre + n[0] + p;
+        });
+      }
+    }
+  }
+
+  // at this point, n is the parts, and we know it's not a comma set
+  // with a single entry.
+
+  // no need to expand pre, since it is guaranteed to be free of brace-sets
+  var pre = m.pre;
+  var post = m.post.length
+    ? expand(m.post, false)
+    : [''];
+
+  var N;
+
+  if (isSequence) {
+    var x = numeric(n[0]);
+    var y = numeric(n[1]);
+    var width = Math.max(n[0].length, n[1].length)
+    var incr = n.length == 3
+      ? Math.abs(numeric(n[2]))
+      : 1;
+    var test = lte;
+    var reverse = y < x;
+    if (reverse) {
+      incr *= -1;
+      test = gte;
+    }
+    var pad = n.some(isPadded);
+
+    N = [];
+
+    for (var i = x; test(i, y); i += incr) {
+      var c;
+      if (isAlphaSequence) {
+        c = String.fromCharCode(i);
+        if (c === '\\')
+          c = '';
+      } else {
+        c = String(i);
+        if (pad) {
+          var need = width - c.length;
+          if (need > 0) {
+            var z = new Array(need + 1).join('0');
+            if (i < 0)
+              c = '-' + z + c.slice(1);
+            else
+              c = z + c;
+          }
+        }
+      }
+      N.push(c);
+    }
+  } else {
+    N = concatMap(n, function(el) { return expand(el, false) });
+  }
+
+  for (var j = 0; j < N.length; j++) {
+    for (var k = 0; k < post.length; k++) {
+      var expansion = pre + N[j] + post[k];
+      if (!isTop || isSequence || expansion)
+        expansions.push(expansion);
+    }
+  }
+
+  return expansions;
+}
+
+
+
+/***/ }),
+
 /***/ 3268:
 /***/ ((module) => {
 
@@ -19035,7 +19455,7 @@ var path = (function () { try { return __nccwpck_require__(1017) } catch (e) {}}
 minimatch.sep = path.sep
 
 var GLOBSTAR = minimatch.GLOBSTAR = Minimatch.GLOBSTAR = {}
-var expand = __nccwpck_require__(8184)
+var expand = __nccwpck_require__(3717)
 
 var plTypes = {
   '!': { open: '(?:(?!(?:', close: '))[^/]*?)'},
@@ -19973,214 +20393,6 @@ function globUnescape (s) {
 function regExpEscape (s) {
   return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
 }
-
-
-/***/ }),
-
-/***/ 8184:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-var concatMap = __nccwpck_require__(6891);
-var balanced = __nccwpck_require__(9417);
-
-module.exports = expandTop;
-
-var escSlash = '\0SLASH'+Math.random()+'\0';
-var escOpen = '\0OPEN'+Math.random()+'\0';
-var escClose = '\0CLOSE'+Math.random()+'\0';
-var escComma = '\0COMMA'+Math.random()+'\0';
-var escPeriod = '\0PERIOD'+Math.random()+'\0';
-
-function numeric(str) {
-  return parseInt(str, 10) == str
-    ? parseInt(str, 10)
-    : str.charCodeAt(0);
-}
-
-function escapeBraces(str) {
-  return str.split('\\\\').join(escSlash)
-            .split('\\{').join(escOpen)
-            .split('\\}').join(escClose)
-            .split('\\,').join(escComma)
-            .split('\\.').join(escPeriod);
-}
-
-function unescapeBraces(str) {
-  return str.split(escSlash).join('\\')
-            .split(escOpen).join('{')
-            .split(escClose).join('}')
-            .split(escComma).join(',')
-            .split(escPeriod).join('.');
-}
-
-
-// Basically just str.split(","), but handling cases
-// where we have nested braced sections, which should be
-// treated as individual members, like {a,{b,c},d}
-function parseCommaParts(str) {
-  if (!str)
-    return [''];
-
-  var parts = [];
-  var m = balanced('{', '}', str);
-
-  if (!m)
-    return str.split(',');
-
-  var pre = m.pre;
-  var body = m.body;
-  var post = m.post;
-  var p = pre.split(',');
-
-  p[p.length-1] += '{' + body + '}';
-  var postParts = parseCommaParts(post);
-  if (post.length) {
-    p[p.length-1] += postParts.shift();
-    p.push.apply(p, postParts);
-  }
-
-  parts.push.apply(parts, p);
-
-  return parts;
-}
-
-function expandTop(str) {
-  if (!str)
-    return [];
-
-  // I don't know why Bash 4.3 does this, but it does.
-  // Anything starting with {} will have the first two bytes preserved
-  // but *only* at the top level, so {},a}b will not expand to anything,
-  // but a{},b}c will be expanded to [a}c,abc].
-  // One could argue that this is a bug in Bash, but since the goal of
-  // this module is to match Bash's rules, we escape a leading {}
-  if (str.substr(0, 2) === '{}') {
-    str = '\\{\\}' + str.substr(2);
-  }
-
-  return expand(escapeBraces(str), true).map(unescapeBraces);
-}
-
-function identity(e) {
-  return e;
-}
-
-function embrace(str) {
-  return '{' + str + '}';
-}
-function isPadded(el) {
-  return /^-?0\d/.test(el);
-}
-
-function lte(i, y) {
-  return i <= y;
-}
-function gte(i, y) {
-  return i >= y;
-}
-
-function expand(str, isTop) {
-  var expansions = [];
-
-  var m = balanced('{', '}', str);
-  if (!m || /\$$/.test(m.pre)) return [str];
-
-  var isNumericSequence = /^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$/.test(m.body);
-  var isAlphaSequence = /^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$/.test(m.body);
-  var isSequence = isNumericSequence || isAlphaSequence;
-  var isOptions = m.body.indexOf(',') >= 0;
-  if (!isSequence && !isOptions) {
-    // {a},b}
-    if (m.post.match(/,.*\}/)) {
-      str = m.pre + '{' + m.body + escClose + m.post;
-      return expand(str);
-    }
-    return [str];
-  }
-
-  var n;
-  if (isSequence) {
-    n = m.body.split(/\.\./);
-  } else {
-    n = parseCommaParts(m.body);
-    if (n.length === 1) {
-      // x{{a,b}}y ==> x{a}y x{b}y
-      n = expand(n[0], false).map(embrace);
-      if (n.length === 1) {
-        var post = m.post.length
-          ? expand(m.post, false)
-          : [''];
-        return post.map(function(p) {
-          return m.pre + n[0] + p;
-        });
-      }
-    }
-  }
-
-  // at this point, n is the parts, and we know it's not a comma set
-  // with a single entry.
-
-  // no need to expand pre, since it is guaranteed to be free of brace-sets
-  var pre = m.pre;
-  var post = m.post.length
-    ? expand(m.post, false)
-    : [''];
-
-  var N;
-
-  if (isSequence) {
-    var x = numeric(n[0]);
-    var y = numeric(n[1]);
-    var width = Math.max(n[0].length, n[1].length)
-    var incr = n.length == 3
-      ? Math.abs(numeric(n[2]))
-      : 1;
-    var test = lte;
-    var reverse = y < x;
-    if (reverse) {
-      incr *= -1;
-      test = gte;
-    }
-    var pad = n.some(isPadded);
-
-    N = [];
-
-    for (var i = x; test(i, y); i += incr) {
-      var c;
-      if (isAlphaSequence) {
-        c = String.fromCharCode(i);
-        if (c === '\\')
-          c = '';
-      } else {
-        c = String(i);
-        if (pad) {
-          var need = width - c.length;
-          if (need > 0) {
-            var z = new Array(need + 1).join('0');
-            if (i < 0)
-              c = '-' + z + c.slice(1);
-            else
-              c = z + c;
-          }
-        }
-      }
-      N.push(c);
-    }
-  } else {
-    N = concatMap(n, function(el) { return expand(el, false) });
-  }
-
-  for (var j = 0; j < N.length; j++) {
-    for (var k = 0; k < post.length; k++) {
-      var expansion = pre + N[j] + post[k];
-      if (!isTop || isSequence || expansion)
-        expansions.push(expansion);
-    }
-  }
-
-  return expansions;
-}
-
 
 
 /***/ }),
