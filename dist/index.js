@@ -71,7 +71,7 @@ const github = __importStar(__nccwpck_require__(5438));
 const path = __importStar(__nccwpck_require__(1017));
 const process = __importStar(__nccwpck_require__(7282));
 const utils_1 = __nccwpck_require__(918);
-const axios_1 = __importDefault(__nccwpck_require__(8757));
+const axios_1 = __importStar(__nccwpck_require__(8757));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const https_1 = __importDefault(__nccwpck_require__(5687));
 const MAX_UPLOAD_RETRIES = 10;
@@ -83,6 +83,9 @@ function retryWithBackoff(fn, retries, label) {
             }
             catch (err) {
                 if (attempt >= retries)
+                    throw err;
+                // 4xx errors are permanent (bad credentials, missing resource) — don't retry.
+                if (err instanceof axios_1.AxiosError && err.response && err.response.status < 500)
                     throw err;
                 const delay = (0, utils_1.exponentialDelay)(attempt);
                 core.warning(`${label}: attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms: ${err}`);
@@ -176,33 +179,38 @@ function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
             // %2B → + and re-encodes it as + (space in query strings), corrupting the
             // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
             const s3Url = new URL(s3PutUrl);
-            yield new Promise((resolve, reject) => {
-                const req = https_1.default.request({
-                    method: 'PUT',
-                    hostname: s3Url.hostname,
-                    port: s3Url.port ? parseInt(s3Url.port) : 443,
-                    path: s3Url.pathname + s3Url.search,
-                    headers: { 'Content-Length': String(body_size) },
-                    timeout: 300000
-                }, res => {
-                    let body = '';
-                    res.on('data', (chunk) => {
-                        body += chunk.toString();
+            try {
+                yield new Promise((resolve, reject) => {
+                    const req = https_1.default.request({
+                        method: 'PUT',
+                        hostname: s3Url.hostname,
+                        port: s3Url.port ? parseInt(s3Url.port) : 443,
+                        path: s3Url.pathname + s3Url.search,
+                        headers: { 'Content-Length': String(body_size) },
+                        timeout: 300000
+                    }, res => {
+                        let body = '';
+                        res.on('data', (chunk) => {
+                            body += chunk.toString();
+                        });
+                        res.on('end', () => {
+                            if (res.statusCode === 200) {
+                                resolve();
+                            }
+                            else {
+                                core.error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`);
+                                reject(new Error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`));
+                            }
+                        });
                     });
-                    res.on('end', () => {
-                        if (res.statusCode === 200) {
-                            resolve();
-                        }
-                        else {
-                            core.error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`);
-                            reject(new Error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`));
-                        }
-                    });
+                    req.on('timeout', () => req.destroy(new Error(`Presigned upload: S3 PUT timed out for ${file}`)));
+                    req.on('error', reject);
+                    fileStream.pipe(req);
                 });
-                req.on('timeout', () => req.destroy(new Error(`Presigned upload: S3 PUT timed out for ${file}`)));
-                req.on('error', reject);
-                fileStream.pipe(req);
-            });
+            }
+            finally {
+                fileStream.destroy();
+            }
         }), MAX_UPLOAD_RETRIES, `Presigned upload of ${path.basename(file)}`);
     });
 }
@@ -280,38 +288,44 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
             // by the proxy.
             const partStream = fs_1.default.createReadStream(file, { start, end });
             const s3Url = new URL(s3PartUrl);
-            const etag = yield new Promise((resolve, reject) => {
-                const req = https_1.default.request({
-                    method: 'PUT',
-                    hostname: s3Url.hostname,
-                    port: s3Url.port ? parseInt(s3Url.port) : 443,
-                    path: s3Url.pathname + s3Url.search,
-                    headers: { 'Content-Length': String(partSize) },
-                    timeout: 300000
-                }, res => {
-                    let body = '';
-                    res.on('data', (chunk) => {
-                        body += chunk.toString();
-                    });
-                    res.on('end', () => {
-                        if (res.statusCode === 200) {
-                            const tag = res.headers['etag'];
-                            if (!tag) {
-                                reject(new Error(`No ETag returned for part ${partNumber} of ${file}`));
+            let etag;
+            try {
+                etag = yield new Promise((resolve, reject) => {
+                    const req = https_1.default.request({
+                        method: 'PUT',
+                        hostname: s3Url.hostname,
+                        port: s3Url.port ? parseInt(s3Url.port) : 443,
+                        path: s3Url.pathname + s3Url.search,
+                        headers: { 'Content-Length': String(partSize) },
+                        timeout: 300000
+                    }, res => {
+                        let body = '';
+                        res.on('data', (chunk) => {
+                            body += chunk.toString();
+                        });
+                        res.on('end', () => {
+                            if (res.statusCode === 200) {
+                                const tag = res.headers['etag'];
+                                if (!tag) {
+                                    reject(new Error(`No ETag returned for part ${partNumber} of ${file}`));
+                                }
+                                else {
+                                    resolve(tag);
+                                }
                             }
                             else {
-                                resolve(tag);
+                                reject(new Error(`Multipart: part ${partNumber}/${partCount} failed with status ${res.statusCode}: ${body}`));
                             }
-                        }
-                        else {
-                            reject(new Error(`Multipart: part ${partNumber}/${partCount} failed with status ${res.statusCode}: ${body}`));
-                        }
+                        });
                     });
+                    req.on('timeout', () => req.destroy(new Error(`Multipart: S3 PUT timed out for part ${partNumber}/${partCount} of ${file}`)));
+                    req.on('error', reject);
+                    partStream.pipe(req);
                 });
-                req.on('timeout', () => req.destroy(new Error(`Multipart: S3 PUT timed out for part ${partNumber}/${partCount} of ${file}`)));
-                req.on('error', reject);
-                partStream.pipe(req);
-            });
+            }
+            finally {
+                partStream.destroy();
+            }
             etags.push({ partNumber, etag });
             core.info(`Multipart: part ${partNumber}/${partCount} done for ${file}`);
         });
@@ -327,9 +341,26 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
                 }
             });
             yield Promise.all(Array.from({ length: Math.min(MULTIPART_CONCURRENCY, partCount) }, worker));
+            // 3. Complete the multipart upload with sorted part list.
+            // Kept inside try so a complete failure triggers the abort below,
+            // preventing orphaned parts from accumulating on S3.
+            core.info(`Multipart: completing upload for ${file}`);
+            const xml = `<CompleteMultipartUpload>${etags
+                .sort((a, b) => a.partNumber - b.partNumber)
+                .map(p => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`)
+                .join('')}</CompleteMultipartUpload>`;
+            const completeUrl = new URL(path.join('/upload-multipart/complete/', buildName, filePath), baseUrl).toString();
+            yield retryWithBackoff(() => __awaiter(this, void 0, void 0, function* () {
+                return client.post(completeUrl, xml, {
+                    params: { uploadId },
+                    headers: { 'Content-Type': 'application/xml' },
+                    timeout: 120000
+                });
+            }), MAX_UPLOAD_RETRIES, `Multipart: complete of ${path.basename(file)}`);
         }
         catch (e) {
             // Abort the multipart upload so S3 does not keep orphaned parts.
+            // This covers both part-upload failures and complete failures.
             const abortUrl = new URL(path.join('/upload-multipart/abort/', buildName, filePath), baseUrl).toString();
             try {
                 yield client.delete(abortUrl, { params: { uploadId }, timeout: 60000 });
@@ -339,20 +370,6 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
             }
             throw e;
         }
-        // 3. Complete the multipart upload with sorted part list.
-        core.info(`Multipart: completing upload for ${file}`);
-        const xml = `<CompleteMultipartUpload>${etags
-            .sort((a, b) => a.partNumber - b.partNumber)
-            .map(p => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`)
-            .join('')}</CompleteMultipartUpload>`;
-        const completeUrl = new URL(path.join('/upload-multipart/complete/', buildName, filePath), baseUrl).toString();
-        yield retryWithBackoff(() => __awaiter(this, void 0, void 0, function* () {
-            return client.post(completeUrl, xml, {
-                params: { uploadId },
-                headers: { 'Content-Type': 'application/xml' },
-                timeout: 120000
-            });
-        }), MAX_UPLOAD_RETRIES, `Multipart: complete of ${path.basename(file)}`);
     });
 }
 function fileVersion(url, name, client, file, build_attempt) {
