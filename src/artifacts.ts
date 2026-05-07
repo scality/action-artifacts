@@ -131,7 +131,9 @@ export async function fileUploadPresigned(
     async () => {
       const presignResp = await client.get(presignUrl, {timeout: 30000})
       const s3PutUrl = (presignResp.data as string).trim()
-      core.info(`Presigned upload: sending ${file} directly to S3 (bypassing proxy)`)
+      core.info(
+        `Presigned upload: sending ${file} directly to S3 (bypassing proxy)`
+      )
 
       const body_size = fs.statSync(file).size
       const fileStream = fs.createReadStream(file)
@@ -172,7 +174,9 @@ export async function fileUploadPresigned(
           }
         )
         req.on('timeout', () =>
-          req.destroy(new Error(`Presigned upload: S3 PUT timed out for ${file}`))
+          req.destroy(
+            new Error(`Presigned upload: S3 PUT timed out for ${file}`)
+          )
         )
         req.on('error', reject)
         fileStream.pipe(req)
@@ -210,11 +214,19 @@ export async function probeServerCapabilities(
   }
 
   const [presigned, multipart] = await Promise.all([
-    probe(new URL('/presign-upload/capability-probe/probe.bin', baseUrl).toString()),
-    probe(new URL('/presign-upload-part/capability-probe/probe.bin', baseUrl).toString(), {
-      partNumber: 1,
-      uploadId: 'probe'
-    })
+    probe(
+      new URL('/presign-upload/capability-probe/probe.bin', baseUrl).toString()
+    ),
+    probe(
+      new URL(
+        '/presign-upload-part/capability-probe/probe.bin',
+        baseUrl
+      ).toString(),
+      {
+        partNumber: 1,
+        uploadId: 'probe'
+      }
+    )
   ])
 
   return {presigned, multipart}
@@ -237,7 +249,7 @@ export async function fileUploadMultipart(
     baseUrl
   ).toString()
   const initiateResp = await retryWithBackoff(
-    () =>
+    async () =>
       client.post(initiateUrl, null, {
         headers: {'Content-Length': '0'},
         timeout: 60000
@@ -311,7 +323,9 @@ export async function fileUploadMultipart(
               const tag = res.headers['etag'] as string
               if (!tag) {
                 reject(
-                  new Error(`No ETag returned for part ${partNumber} of ${file}`)
+                  new Error(
+                    `No ETag returned for part ${partNumber} of ${file}`
+                  )
                 )
               } else {
                 resolve(tag)
@@ -348,7 +362,7 @@ export async function fileUploadMultipart(
         if (partNumber === undefined) break
         // Re-fetch presign URL on each attempt — presigned URLs are time-limited.
         await retryWithBackoff(
-          () => uploadPart(partNumber),
+          async () => uploadPart(partNumber),
           MAX_UPLOAD_RETRIES,
           `Multipart: part ${partNumber}/${partCount} of ${path.basename(file)}`
         )
@@ -386,7 +400,7 @@ export async function fileUploadMultipart(
     baseUrl
   ).toString()
   await retryWithBackoff(
-    () =>
+    async () =>
       client.post(completeUrl, xml, {
         params: {uploadId},
         headers: {'Content-Type': 'application/xml'},

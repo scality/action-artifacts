@@ -243,9 +243,11 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
         const partCount = Math.ceil(fileSize / MULTIPART_PART_SIZE);
         core.info(`Multipart: initiating upload (${partCount} parts) for ${file}`);
         const initiateUrl = new URL(path.join('/upload-multipart/initiate/', buildName, filePath), baseUrl).toString();
-        const initiateResp = yield retryWithBackoff(() => client.post(initiateUrl, null, {
-            headers: { 'Content-Length': '0' },
-            timeout: 60000
+        const initiateResp = yield retryWithBackoff(() => __awaiter(this, void 0, void 0, function* () {
+            return client.post(initiateUrl, null, {
+                headers: { 'Content-Length': '0' },
+                timeout: 60000
+            });
         }), MAX_UPLOAD_RETRIES, `Multipart: initiate of ${path.basename(file)}`);
         const uploadId = (_a = initiateResp.data.match(/<UploadId>([^<]+)<\/UploadId>/)) === null || _a === void 0 ? void 0 : _a[1];
         if (!uploadId) {
@@ -321,7 +323,7 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
                     if (partNumber === undefined)
                         break;
                     // Re-fetch presign URL on each attempt — presigned URLs are time-limited.
-                    yield retryWithBackoff(() => uploadPart(partNumber), MAX_UPLOAD_RETRIES, `Multipart: part ${partNumber}/${partCount} of ${path.basename(file)}`);
+                    yield retryWithBackoff(() => __awaiter(this, void 0, void 0, function* () { return uploadPart(partNumber); }), MAX_UPLOAD_RETRIES, `Multipart: part ${partNumber}/${partCount} of ${path.basename(file)}`);
                 }
             });
             yield Promise.all(Array.from({ length: Math.min(MULTIPART_CONCURRENCY, partCount) }, worker));
@@ -344,10 +346,12 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
             .map(p => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`)
             .join('')}</CompleteMultipartUpload>`;
         const completeUrl = new URL(path.join('/upload-multipart/complete/', buildName, filePath), baseUrl).toString();
-        yield retryWithBackoff(() => client.post(completeUrl, xml, {
-            params: { uploadId },
-            headers: { 'Content-Type': 'application/xml' },
-            timeout: 120000
+        yield retryWithBackoff(() => __awaiter(this, void 0, void 0, function* () {
+            return client.post(completeUrl, xml, {
+                params: { uploadId },
+                headers: { 'Content-Type': 'application/xml' },
+                timeout: 120000
+            });
         }), MAX_UPLOAD_RETRIES, `Multipart: complete of ${path.basename(file)}`);
     });
 }

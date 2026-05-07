@@ -149,11 +149,17 @@ async function upload_one_file(
   } else if (capabilities.presigned) {
     await fileUploadPresigned(client, url, name, file, artifactsPath)
   } else {
-    await fileUpload(client, new URL(path.join('/upload/', name, artifactsPath), url).toString(), file)
+    await fileUpload(
+      client,
+      new URL(path.join('/upload/', name, artifactsPath), url).toString(),
+      file
+    )
   }
   const elapsed = (Date.now() - uploadStart) / 1000
   const mbps = (fileSize / 1e6 / elapsed).toFixed(1)
-  core.info(`${artifactsPath} uploaded in ${elapsed.toFixed(1)}s (${mbps} MB/s)`)
+  core.info(
+    `${artifactsPath} uploaded in ${elapsed.toFixed(1)}s (${mbps} MB/s)`
+  )
 }
 
 export async function upload(inputs: InputsArtifacts): Promise<void> {
@@ -210,7 +216,14 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     await async.eachLimit(requests, 8, async (file: string, next) => {
       core.info(`Uploading file: ${file}`)
       try {
-        await upload_one_file(client, file, dirname, name, inputs.url, capabilities)
+        await upload_one_file(
+          client,
+          file,
+          dirname,
+          name,
+          inputs.url,
+          capabilities
+        )
       } catch (e) {
         if (e instanceof Error) {
           return next(e)
