@@ -182,7 +182,8 @@ function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
                     hostname: s3Url.hostname,
                     port: s3Url.port ? parseInt(s3Url.port) : 443,
                     path: s3Url.pathname + s3Url.search,
-                    headers: { 'Content-Length': String(body_size) }
+                    headers: { 'Content-Length': String(body_size) },
+                    timeout: 300000
                 }, res => {
                     let body = '';
                     res.on('data', (chunk) => {
@@ -198,6 +199,7 @@ function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
                         }
                     });
                 });
+                req.on('timeout', () => req.destroy(new Error(`Presigned upload: S3 PUT timed out for ${file}`)));
                 req.on('error', reject);
                 fileStream.pipe(req);
             });
@@ -241,10 +243,10 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
         const partCount = Math.ceil(fileSize / MULTIPART_PART_SIZE);
         core.info(`Multipart: initiating upload (${partCount} parts) for ${file}`);
         const initiateUrl = new URL(path.join('/upload-multipart/initiate/', buildName, filePath), baseUrl).toString();
-        const initiateResp = yield client.post(initiateUrl, null, {
+        const initiateResp = yield retryWithBackoff(() => client.post(initiateUrl, null, {
             headers: { 'Content-Length': '0' },
             timeout: 60000
-        });
+        }), MAX_UPLOAD_RETRIES, `Multipart: initiate of ${path.basename(file)}`);
         const uploadId = (_a = initiateResp.data.match(/<UploadId>([^<]+)<\/UploadId>/)) === null || _a === void 0 ? void 0 : _a[1];
         if (!uploadId) {
             throw new Error(`Multipart initiate failed for ${file}: could not extract uploadId`);
@@ -282,7 +284,8 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
                     hostname: s3Url.hostname,
                     port: s3Url.port ? parseInt(s3Url.port) : 443,
                     path: s3Url.pathname + s3Url.search,
-                    headers: { 'Content-Length': String(partSize) }
+                    headers: { 'Content-Length': String(partSize) },
+                    timeout: 300000
                 }, res => {
                     let body = '';
                     res.on('data', (chunk) => {
@@ -303,6 +306,7 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
                         }
                     });
                 });
+                req.on('timeout', () => req.destroy(new Error(`Multipart: S3 PUT timed out for part ${partNumber}/${partCount} of ${file}`)));
                 req.on('error', reject);
                 partStream.pipe(req);
             });
@@ -340,11 +344,11 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
             .map(p => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`)
             .join('')}</CompleteMultipartUpload>`;
         const completeUrl = new URL(path.join('/upload-multipart/complete/', buildName, filePath), baseUrl).toString();
-        yield client.post(completeUrl, xml, {
+        yield retryWithBackoff(() => client.post(completeUrl, xml, {
             params: { uploadId },
             headers: { 'Content-Type': 'application/xml' },
             timeout: 120000
-        });
+        }), MAX_UPLOAD_RETRIES, `Multipart: complete of ${path.basename(file)}`);
     });
 }
 function fileVersion(url, name, client, file, build_attempt) {

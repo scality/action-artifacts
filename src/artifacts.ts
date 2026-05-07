@@ -147,7 +147,8 @@ export async function fileUploadPresigned(
             hostname: s3Url.hostname,
             port: s3Url.port ? parseInt(s3Url.port) : 443,
             path: s3Url.pathname + s3Url.search,
-            headers: {'Content-Length': String(body_size)}
+            headers: {'Content-Length': String(body_size)},
+            timeout: 300000
           },
           res => {
             let body = ''
@@ -169,6 +170,9 @@ export async function fileUploadPresigned(
               }
             })
           }
+        )
+        req.on('timeout', () =>
+          req.destroy(new Error(`Presigned upload: S3 PUT timed out for ${file}`))
         )
         req.on('error', reject)
         fileStream.pipe(req)
@@ -232,10 +236,15 @@ export async function fileUploadMultipart(
     path.join('/upload-multipart/initiate/', buildName, filePath),
     baseUrl
   ).toString()
-  const initiateResp = await client.post(initiateUrl, null, {
-    headers: {'Content-Length': '0'},
-    timeout: 60000
-  })
+  const initiateResp = await retryWithBackoff(
+    () =>
+      client.post(initiateUrl, null, {
+        headers: {'Content-Length': '0'},
+        timeout: 60000
+      }),
+    MAX_UPLOAD_RETRIES,
+    `Multipart: initiate of ${path.basename(file)}`
+  )
   const uploadId = (initiateResp.data as string).match(
     /<UploadId>([^<]+)<\/UploadId>/
   )?.[1]
@@ -289,7 +298,8 @@ export async function fileUploadMultipart(
           hostname: s3Url.hostname,
           port: s3Url.port ? parseInt(s3Url.port) : 443,
           path: s3Url.pathname + s3Url.search,
-          headers: {'Content-Length': String(partSize)}
+          headers: {'Content-Length': String(partSize)},
+          timeout: 300000
         },
         res => {
           let body = ''
@@ -315,6 +325,13 @@ export async function fileUploadMultipart(
             }
           })
         }
+      )
+      req.on('timeout', () =>
+        req.destroy(
+          new Error(
+            `Multipart: S3 PUT timed out for part ${partNumber}/${partCount} of ${file}`
+          )
+        )
       )
       req.on('error', reject)
       partStream.pipe(req)
@@ -368,11 +385,16 @@ export async function fileUploadMultipart(
     path.join('/upload-multipart/complete/', buildName, filePath),
     baseUrl
   ).toString()
-  await client.post(completeUrl, xml, {
-    params: {uploadId},
-    headers: {'Content-Type': 'application/xml'},
-    timeout: 120000
-  })
+  await retryWithBackoff(
+    () =>
+      client.post(completeUrl, xml, {
+        params: {uploadId},
+        headers: {'Content-Type': 'application/xml'},
+        timeout: 120000
+      }),
+    MAX_UPLOAD_RETRIES,
+    `Multipart: complete of ${path.basename(file)}`
+  )
 }
 
 export async function fileVersion(
