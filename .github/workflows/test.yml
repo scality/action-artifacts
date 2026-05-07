@@ -22,7 +22,7 @@ jobs:
         ports:
         - 8000:8000
       artifacts:
-        image: "registry.scality.com/artifacts/artifacts:4.2.6"
+        image: "ghcr.io/scality/artifacts:4.3.3"
         ports:
           - 8080:80
         env:
@@ -35,7 +35,7 @@ jobs:
           GITHUB_API_ENABLED: true
           GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Set Node.js
         uses: actions/setup-node@v4.0.3
         with:
