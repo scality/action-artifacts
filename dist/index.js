@@ -85,7 +85,9 @@ function retryWithBackoff(fn, retries, label) {
                 if (attempt >= retries)
                     throw err;
                 // 4xx errors are permanent (bad credentials, missing resource) — don't retry.
-                if (err instanceof axios_1.AxiosError && err.response && err.response.status < 500)
+                if (err instanceof axios_1.AxiosError &&
+                    err.response &&
+                    err.response.status < 500)
                     throw err;
                 const delay = (0, utils_1.exponentialDelay)(attempt);
                 core.warning(`${label}: attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms: ${err}`);
@@ -961,10 +963,15 @@ function upload(inputs) {
         }
         const capabilities = yield (0, artifacts_1.probeServerCapabilities)(client, inputs.url);
         core.info(`Server capabilities — presigned: ${capabilities.presigned}, multipart: ${capabilities.multipart}`);
-        // Limit concurrent file uploads to 8. Combined with MULTIPART_CONCURRENCY=4,
-        // the peak S3 connection count is 8×4=32, which avoids throttling on
-        // Scaleway Object Storage while still delivering real parallelism gains.
-        yield async_1.default.eachLimit(requests, 8, (file, next) => __awaiter(this, void 0, void 0, function* () {
+        // Use higher file concurrency when no file will trigger multipart upload.
+        // Multipart files consume MULTIPART_CONCURRENCY=4 S3 connections each, so
+        // we cap at 8 files (8×4=32 peak connections). For presigned single-PUT
+        // uploads each file uses 1 connection, so we can restore the original 16.
+        const hasLargeFile = capabilities.multipart &&
+            requests.some(f => fs_1.default.statSync(f).size >= artifacts_1.MULTIPART_THRESHOLD);
+        const fileConcurrency = hasLargeFile ? 8 : 16;
+        core.info(`File concurrency: ${fileConcurrency} (${hasLargeFile ? 'multipart files detected' : 'no multipart files'})`);
+        yield async_1.default.eachLimit(requests, fileConcurrency, (file, next) => __awaiter(this, void 0, void 0, function* () {
             core.info(`Uploading file: ${file}`);
             try {
                 yield upload_one_file(client, file, dirname, name, inputs.url, capabilities);

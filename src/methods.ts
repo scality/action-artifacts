@@ -208,30 +208,42 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     `Server capabilities — presigned: ${capabilities.presigned}, multipart: ${capabilities.multipart}`
   )
 
-  // Limit concurrent file uploads to 8. Combined with MULTIPART_CONCURRENCY=4,
-  // the peak S3 connection count is 8×4=32, which avoids throttling on
-  // Scaleway Object Storage while still delivering real parallelism gains.
+  // Use higher file concurrency when no file will trigger multipart upload.
+  // Multipart files consume MULTIPART_CONCURRENCY=4 S3 connections each, so
+  // we cap at 8 files (8×4=32 peak connections). For presigned single-PUT
+  // uploads each file uses 1 connection, so we can restore the original 16.
+  const hasLargeFile =
+    capabilities.multipart &&
+    requests.some(f => fs.statSync(f).size >= MULTIPART_THRESHOLD)
+  const fileConcurrency = hasLargeFile ? 8 : 16
+  core.info(
+    `File concurrency: ${fileConcurrency} (${hasLargeFile ? 'multipart files detected' : 'no multipart files'})`
+  )
   core.startGroup(`Uploading ${requests.length} files`)
   try {
-    await async.eachLimit(requests, 8, async (file: string, next) => {
-      core.info(`Uploading file: ${file}`)
-      try {
-        await upload_one_file(
-          client,
-          file,
-          dirname,
-          name,
-          inputs.url,
-          capabilities
-        )
-      } catch (e) {
-        if (e instanceof Error) {
-          return next(e)
+    await async.eachLimit(
+      requests,
+      fileConcurrency,
+      async (file: string, next) => {
+        core.info(`Uploading file: ${file}`)
+        try {
+          await upload_one_file(
+            client,
+            file,
+            dirname,
+            name,
+            inputs.url,
+            capabilities
+          )
+        } catch (e) {
+          if (e instanceof Error) {
+            return next(e)
+          }
         }
+        core.info(`${file} has been uploaded`)
+        next()
       }
-      core.info(`${file} has been uploaded`)
-      next()
-    })
+    )
   } finally {
     core.endGroup()
   }
