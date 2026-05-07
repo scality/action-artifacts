@@ -5,6 +5,7 @@ import * as process from 'process'
 import {
   artifactsRetry,
   artifactsIndexRequestRetry,
+  exponentialDelay,
   getCommitSha1,
   workflowRunResponseDataType,
   workflowRunResponseType
@@ -14,6 +15,27 @@ import {GitHub} from '@actions/github/lib/utils'
 import {InputsArtifacts} from './inputs-helper'
 import fs from 'fs'
 import https from 'https'
+
+const MAX_UPLOAD_RETRIES = 10
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  retries: number,
+  label: string
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (attempt >= retries) throw err
+      const delay = exponentialDelay(attempt)
+      core.warning(
+        `${label}: attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms: ${err}`
+      )
+      await new Promise<void>(resolve => setTimeout(resolve, delay))
+    }
+  }
+}
 
 // Files larger than this threshold use multipart upload instead of a single PUT.
 export const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100 MB
@@ -103,50 +125,58 @@ export async function fileUploadPresigned(
     path.join('/presign-upload/', buildName, filePath),
     baseUrl
   ).toString()
-  const presignResp = await client.get(presignUrl, {timeout: 30000})
-  const s3PutUrl = (presignResp.data as string).trim()
-  core.info(`Presigned upload: sending ${file} directly to S3 (bypassing proxy)`)
 
-  const body_size = fs.statSync(file).size
-  const fileStream = fs.createReadStream(file)
-  // Use raw https.request instead of axios.put to preserve the presigned URL
-  // query string exactly. Axios parses URLs via the URL API which decodes
-  // %2B → + and re-encodes it as + (space in query strings), corrupting the
-  // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
-  const s3Url = new URL(s3PutUrl)
-  await new Promise<void>((resolve, reject) => {
-    const req = https.request(
-      {
-        method: 'PUT',
-        hostname: s3Url.hostname,
-        port: s3Url.port ? parseInt(s3Url.port) : 443,
-        path: s3Url.pathname + s3Url.search,
-        headers: {'Content-Length': String(body_size)}
-      },
-      res => {
-        let body = ''
-        res.on('data', (chunk: Buffer) => {
-          body += chunk.toString()
-        })
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            resolve()
-          } else {
-            core.error(
-              `Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`
-            )
-            reject(
-              new Error(
-                `Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`
-              )
-            )
+  // Re-fetch the presign URL on each attempt — presigned URLs are time-limited.
+  await retryWithBackoff(
+    async () => {
+      const presignResp = await client.get(presignUrl, {timeout: 30000})
+      const s3PutUrl = (presignResp.data as string).trim()
+      core.info(`Presigned upload: sending ${file} directly to S3 (bypassing proxy)`)
+
+      const body_size = fs.statSync(file).size
+      const fileStream = fs.createReadStream(file)
+      // Use raw https.request instead of axios.put to preserve the presigned URL
+      // query string exactly. Axios parses URLs via the URL API which decodes
+      // %2B → + and re-encodes it as + (space in query strings), corrupting the
+      // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
+      const s3Url = new URL(s3PutUrl)
+      await new Promise<void>((resolve, reject) => {
+        const req = https.request(
+          {
+            method: 'PUT',
+            hostname: s3Url.hostname,
+            port: s3Url.port ? parseInt(s3Url.port) : 443,
+            path: s3Url.pathname + s3Url.search,
+            headers: {'Content-Length': String(body_size)}
+          },
+          res => {
+            let body = ''
+            res.on('data', (chunk: Buffer) => {
+              body += chunk.toString()
+            })
+            res.on('end', () => {
+              if (res.statusCode === 200) {
+                resolve()
+              } else {
+                core.error(
+                  `Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`
+                )
+                reject(
+                  new Error(
+                    `Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`
+                  )
+                )
+              }
+            })
           }
-        })
-      }
-    )
-    req.on('error', reject)
-    fileStream.pipe(req)
-  })
+        )
+        req.on('error', reject)
+        fileStream.pipe(req)
+      })
+    },
+    MAX_UPLOAD_RETRIES,
+    `Presigned upload of ${path.basename(file)}`
+  )
 }
 
 export type ServerCapabilities = {
@@ -299,7 +329,12 @@ export async function fileUploadMultipart(
       while (queue.length > 0) {
         const partNumber = queue.shift()
         if (partNumber === undefined) break
-        await uploadPart(partNumber)
+        // Re-fetch presign URL on each attempt — presigned URLs are time-limited.
+        await retryWithBackoff(
+          () => uploadPart(partNumber),
+          MAX_UPLOAD_RETRIES,
+          `Multipart: part ${partNumber}/${partCount} of ${path.basename(file)}`
+        )
       }
     }
     await Promise.all(

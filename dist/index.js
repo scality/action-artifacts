@@ -74,6 +74,23 @@ const utils_1 = __nccwpck_require__(918);
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const https_1 = __importDefault(__nccwpck_require__(5687));
+const MAX_UPLOAD_RETRIES = 10;
+function retryWithBackoff(fn, retries, label) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (let attempt = 0;; attempt++) {
+            try {
+                return yield fn();
+            }
+            catch (err) {
+                if (attempt >= retries)
+                    throw err;
+                const delay = (0, utils_1.exponentialDelay)(attempt);
+                core.warning(`${label}: attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms: ${err}`);
+                yield new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    });
+}
 // Files larger than this threshold use multipart upload instead of a single PUT.
 exports.MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MB
 // Each part is 64 MB. Smaller parts reduce the risk of a single stalled TCP
@@ -147,41 +164,44 @@ function fileUpload(client_1, url_1, file_1) {
 function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
     return __awaiter(this, void 0, void 0, function* () {
         const presignUrl = new URL(path.join('/presign-upload/', buildName, filePath), baseUrl).toString();
-        const presignResp = yield client.get(presignUrl, { timeout: 30000 });
-        const s3PutUrl = presignResp.data.trim();
-        core.info(`Presigned upload: sending ${file} directly to S3 (bypassing proxy)`);
-        const body_size = fs_1.default.statSync(file).size;
-        const fileStream = fs_1.default.createReadStream(file);
-        // Use raw https.request instead of axios.put to preserve the presigned URL
-        // query string exactly. Axios parses URLs via the URL API which decodes
-        // %2B → + and re-encodes it as + (space in query strings), corrupting the
-        // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
-        const s3Url = new URL(s3PutUrl);
-        yield new Promise((resolve, reject) => {
-            const req = https_1.default.request({
-                method: 'PUT',
-                hostname: s3Url.hostname,
-                port: s3Url.port ? parseInt(s3Url.port) : 443,
-                path: s3Url.pathname + s3Url.search,
-                headers: { 'Content-Length': String(body_size) }
-            }, res => {
-                let body = '';
-                res.on('data', (chunk) => {
-                    body += chunk.toString();
+        // Re-fetch the presign URL on each attempt — presigned URLs are time-limited.
+        yield retryWithBackoff(() => __awaiter(this, void 0, void 0, function* () {
+            const presignResp = yield client.get(presignUrl, { timeout: 30000 });
+            const s3PutUrl = presignResp.data.trim();
+            core.info(`Presigned upload: sending ${file} directly to S3 (bypassing proxy)`);
+            const body_size = fs_1.default.statSync(file).size;
+            const fileStream = fs_1.default.createReadStream(file);
+            // Use raw https.request instead of axios.put to preserve the presigned URL
+            // query string exactly. Axios parses URLs via the URL API which decodes
+            // %2B → + and re-encodes it as + (space in query strings), corrupting the
+            // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
+            const s3Url = new URL(s3PutUrl);
+            yield new Promise((resolve, reject) => {
+                const req = https_1.default.request({
+                    method: 'PUT',
+                    hostname: s3Url.hostname,
+                    port: s3Url.port ? parseInt(s3Url.port) : 443,
+                    path: s3Url.pathname + s3Url.search,
+                    headers: { 'Content-Length': String(body_size) }
+                }, res => {
+                    let body = '';
+                    res.on('data', (chunk) => {
+                        body += chunk.toString();
+                    });
+                    res.on('end', () => {
+                        if (res.statusCode === 200) {
+                            resolve();
+                        }
+                        else {
+                            core.error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`);
+                            reject(new Error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`));
+                        }
+                    });
                 });
-                res.on('end', () => {
-                    if (res.statusCode === 200) {
-                        resolve();
-                    }
-                    else {
-                        core.error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`);
-                        reject(new Error(`Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`));
-                    }
-                });
+                req.on('error', reject);
+                fileStream.pipe(req);
             });
-            req.on('error', reject);
-            fileStream.pipe(req);
-        });
+        }), MAX_UPLOAD_RETRIES, `Presigned upload of ${path.basename(file)}`);
     });
 }
 // Probe the server once to detect which upload routes are available.
@@ -296,7 +316,8 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
                     const partNumber = queue.shift();
                     if (partNumber === undefined)
                         break;
-                    yield uploadPart(partNumber);
+                    // Re-fetch presign URL on each attempt — presigned URLs are time-limited.
+                    yield retryWithBackoff(() => uploadPart(partNumber), MAX_UPLOAD_RETRIES, `Multipart: part ${partNumber}/${partCount} of ${path.basename(file)}`);
                 }
             });
             yield Promise.all(Array.from({ length: Math.min(MULTIPART_CONCURRENCY, partCount) }, worker));
