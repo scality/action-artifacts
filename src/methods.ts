@@ -136,7 +136,16 @@ async function upload_one_file(
 
   const artifactsPath: string = file.replace(dirname, '')
   if (run_attempt !== '1') {
-    await fileVersion(url, name, client, artifactsPath, run_attempt)
+    try {
+      await fileVersion(url, name, client, artifactsPath, run_attempt)
+    } catch (e) {
+      // Versioning is best-effort: back up the previous file before overwriting.
+      // If it fails (e.g. transient S3 error, or file was never uploaded in a
+      // prior attempt), log a warning and proceed with the upload anyway.
+      core.warning(
+        `Versioning failed for ${artifactsPath}, proceeding with upload: ${e}`
+      )
+    }
   }
 
   const fileSize = fs.statSync(file).size

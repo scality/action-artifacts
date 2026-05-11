@@ -890,7 +890,15 @@ function upload_one_file(client, file, dirname, name, url, capabilities) {
             : process.env['GITHUB_RUN_ATTEMPT'];
         const artifactsPath = file.replace(dirname, '');
         if (run_attempt !== '1') {
-            yield (0, artifacts_1.fileVersion)(url, name, client, artifactsPath, run_attempt);
+            try {
+                yield (0, artifacts_1.fileVersion)(url, name, client, artifactsPath, run_attempt);
+            }
+            catch (e) {
+                // Versioning is best-effort: back up the previous file before overwriting.
+                // If it fails (e.g. transient S3 error, or file was never uploaded in a
+                // prior attempt), log a warning and proceed with the upload anyway.
+                core.warning(`Versioning failed for ${artifactsPath}, proceeding with upload: ${e}`);
+            }
         }
         const fileSize = fs_1.default.statSync(file).size;
         const uploadStart = Date.now();
@@ -971,20 +979,26 @@ function upload(inputs) {
             requests.some(f => fs_1.default.statSync(f).size >= artifacts_1.MULTIPART_THRESHOLD);
         const fileConcurrency = hasLargeFile ? 8 : 16;
         core.info(`File concurrency: ${fileConcurrency} (${hasLargeFile ? 'multipart files detected' : 'no multipart files'})`);
-        yield async_1.default.eachLimit(requests, fileConcurrency, (file, next) => __awaiter(this, void 0, void 0, function* () {
-            core.info(`Uploading file: ${file}`);
-            try {
-                yield upload_one_file(client, file, dirname, name, inputs.url, capabilities);
-            }
-            catch (e) {
-                if (e instanceof Error) {
-                    return next(e);
+        core.startGroup(`Uploading ${requests.length} files`);
+        try {
+            yield async_1.default.eachLimit(requests, fileConcurrency, (file, next) => __awaiter(this, void 0, void 0, function* () {
+                core.info(`Uploading file: ${file}`);
+                try {
+                    yield upload_one_file(client, file, dirname, name, inputs.url, capabilities);
                 }
-            }
-            core.info(`${file} has been uploaded`);
-            next();
-        }));
-        core.info('All files are uploaded ');
+                catch (e) {
+                    if (e instanceof Error) {
+                        return next(e);
+                    }
+                }
+                core.info(`${file} has been uploaded`);
+                next();
+            }));
+        }
+        finally {
+            core.endGroup();
+        }
+        core.info(`All ${requests.length} files are uploaded`);
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
         yield (0, artifacts_1.setNotice)(name, inputs.url);
     });
