@@ -21,7 +21,7 @@ jobs:
         ports:
         - 8080:8000
       artifacts:
-        image: "registry.scality.com/artifacts/artifacts:4.2.6"
+        image: "ghcr.io/scality/artifacts:4.3.3"
         ports:
           - 8000:80
         env:
@@ -52,7 +52,7 @@ jobs:
           AWS_ACCESS_KEY_ID: accessKey1
           AWS_BUCKET_PREFIX: artifacts
           ENDPOINT_URL: http://localhost:8080
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - run: echo SUCCESS > .final_status
       - name: Artifacts Upload
         id: artifacts-upload

@@ -29,7 +29,7 @@ jobs:
       sha: ${{ steps.index.outputs.sha }}
       actor: ${{ steps.index.outputs.actor }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Setup final status file
         run: echo -n SUCCESSFUL > .final_status
       - name: Push final status
