@@ -175,20 +175,26 @@ export async function upload(inputs: InputsArtifacts): Promise<void> {
     core.warning(`No files found for the provided path: ${inputs.source}`)
     return
   }
-  await async.eachLimit(requests, 16, async (file: string, next) => {
-    core.info(`Uploading file: ${file}`)
-    try {
-      await upload_one_file(client, file, dirname, name, inputs.url)
-    } catch (e) {
-      if (e instanceof Error) {
-        return next(e)
-      }
-    }
-    core.info(`${file} has been uploaded`)
-    next()
-  })
 
-  core.info('All files are uploaded ')
+  core.startGroup(`Uploading ${requests.length} files`)
+  try {
+    await async.eachLimit(requests, 16, async (file: string, next) => {
+      core.info(`Uploading file: ${file}`)
+      try {
+        await upload_one_file(client, file, dirname, name, inputs.url)
+      } catch (e) {
+        if (e instanceof Error) {
+          return next(e)
+        }
+      }
+      core.info(`${file} has been uploaded`)
+      next()
+    })
+  } finally {
+    core.endGroup()
+  }
+
+  core.info(`All ${requests.length} files are uploaded`)
 
   await setOutputs(name, inputs.url)
   await setNotice(name, inputs.url)

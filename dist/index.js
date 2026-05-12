@@ -42,7 +42,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setIndex = exports.getWorkflowRun = exports.setDefaultIndex = exports.fileVersion = exports.fileUpload = exports.setNotice = exports.setOutputs = exports.artifactsPatternName = exports.artifactsName = exports.workflowName = void 0;
+exports.workflowName = workflowName;
+exports.artifactsName = artifactsName;
+exports.artifactsPatternName = artifactsPatternName;
+exports.setOutputs = setOutputs;
+exports.setNotice = setNotice;
+exports.fileUpload = fileUpload;
+exports.fileVersion = fileVersion;
+exports.setDefaultIndex = setDefaultIndex;
+exports.getWorkflowRun = getWorkflowRun;
+exports.setIndex = setIndex;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const path = __importStar(__nccwpck_require__(1017));
@@ -59,7 +68,6 @@ function workflowName(workflow) {
         return workflow.replace(/\W/g, '-').replace(/^-/, '');
     });
 }
-exports.workflowName = workflowName;
 function artifactsName() {
     return __awaiter(this, void 0, void 0, function* () {
         const owner = github.context.repo.owner;
@@ -70,7 +78,6 @@ function artifactsName() {
         return `github:${owner}:${repo}:staging-${commit}.${workflow}.${runNumber}`;
     });
 }
-exports.artifactsName = artifactsName;
 function artifactsPatternName(workflow) {
     return __awaiter(this, void 0, void 0, function* () {
         const owner = github.context.repo.owner;
@@ -80,7 +87,6 @@ function artifactsPatternName(workflow) {
         return `github:${owner}:${repo}:staging-${commit}.${workflow}`;
     });
 }
-exports.artifactsPatternName = artifactsPatternName;
 function setOutputs(name, url) {
     return __awaiter(this, void 0, void 0, function* () {
         core.setOutput('name', name);
@@ -88,15 +94,13 @@ function setOutputs(name, url) {
         core.setOutput('redirect-link', `${url}/redirect/${name}`);
     });
 }
-exports.setOutputs = setOutputs;
 function setNotice(name, url) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`::notice:: Your artifacts has been uploaded here: ${url}/builds/${name}`);
     });
 }
-exports.setNotice = setNotice;
-function fileUpload(client, url, file, retries = 10) {
-    return __awaiter(this, void 0, void 0, function* () {
+function fileUpload(client_1, url_1, file_1) {
+    return __awaiter(this, arguments, void 0, function* (client, url, file, retries = 10) {
         const body_size = fs_1.default.statSync(file).size;
         const fileStream = fs_1.default.createReadStream(file);
         const request_config = {
@@ -116,7 +120,6 @@ function fileUpload(client, url, file, retries = 10) {
         return client.put(url, fileStream, request_config);
     });
 }
-exports.fileUpload = fileUpload;
 function fileVersion(url, name, client, file, build_attempt) {
     return __awaiter(this, void 0, void 0, function* () {
         const final_url = new URL(path.join('/version/', build_attempt, name, file), url).toString();
@@ -126,10 +129,9 @@ function fileVersion(url, name, client, file, build_attempt) {
         }
     });
 }
-exports.fileVersion = fileVersion;
 function setDefaultIndex(inputs) {
-    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b, _c, _d;
         const client = axios_1.default.create({
             auth: {
                 username: inputs.user,
@@ -178,7 +180,6 @@ function setDefaultIndex(inputs) {
         core.info('Index has been uploaded');
     });
 }
-exports.setDefaultIndex = setDefaultIndex;
 function getWorkflowRun() {
     return __awaiter(this, void 0, void 0, function* () {
         const token = core.getInput('token');
@@ -191,7 +192,6 @@ function getWorkflowRun() {
         return workflowRun.data;
     });
 }
-exports.getWorkflowRun = getWorkflowRun;
 function setIndex(client, url, metadata) {
     return __awaiter(this, void 0, void 0, function* () {
         const owner = github.context.repo.owner.toLowerCase();
@@ -215,7 +215,6 @@ function setIndex(client, url, metadata) {
         return yield client.get(metadataUrl, requestConfig);
     });
 }
-exports.setIndex = setIndex;
 
 
 /***/ }),
@@ -284,7 +283,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getInputList = exports.getInputs = void 0;
+exports.getInputs = getInputs;
+exports.getInputList = getInputList;
 const core = __importStar(__nccwpck_require__(2186));
 const path = __importStar(__nccwpck_require__(1017));
 const constants_1 = __nccwpck_require__(5105);
@@ -355,7 +355,6 @@ function getInputs() {
         args
     };
 }
-exports.getInputs = getInputs;
 function getInputList(name, options) {
     let res = {};
     const input = core.getInput(name, options).split('\n');
@@ -368,7 +367,6 @@ function getInputList(name, options) {
     }
     return res;
 }
-exports.getInputList = getInputList;
 
 
 /***/ }),
@@ -503,7 +501,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.index = exports.get = exports.upload = exports.prolong = exports.promote = exports.setup = void 0;
+exports.setup = setup;
+exports.promote = promote;
+exports.prolong = prolong;
+exports.upload = upload;
+exports.get = get;
+exports.index = index;
 const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
 const async_1 = __importDefault(__nccwpck_require__(7888));
@@ -520,7 +523,6 @@ function setup(inputs) {
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
     });
 }
-exports.setup = setup;
 function promote(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$');
@@ -568,7 +570,6 @@ function promote(inputs) {
         yield (0, artifacts_1.setNotice)(promoted_name, inputs.url);
     });
 }
-exports.promote = promote;
 function prolong(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const name_regex = new RegExp('(^[^/]+:)staging(-[0-9a-f]+.[^./]+.[0-9]+)$');
@@ -598,7 +599,6 @@ function prolong(inputs) {
         yield (0, artifacts_1.setNotice)(artifacts_target, inputs.url);
     });
 }
-exports.prolong = prolong;
 function upload_one_file(client, file, dirname, name, url) {
     return __awaiter(this, void 0, void 0, function* () {
         const run_attempt = process.env['GITHUB_RUN_ATTEMPT'] === undefined
@@ -613,8 +613,8 @@ function upload_one_file(client, file, dirname, name, url) {
     });
 }
 function upload(inputs) {
-    var _a, e_1, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, e_1, _b, _c;
         const name = yield (0, artifacts_1.artifactsName)();
         let dirname;
         const requests = [];
@@ -660,25 +660,30 @@ function upload(inputs) {
             core.warning(`No files found for the provided path: ${inputs.source}`);
             return;
         }
-        yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
-            core.info(`Uploading file: ${file}`);
-            try {
-                yield upload_one_file(client, file, dirname, name, inputs.url);
-            }
-            catch (e) {
-                if (e instanceof Error) {
-                    return next(e);
+        core.startGroup(`Uploading ${requests.length} files`);
+        try {
+            yield async_1.default.eachLimit(requests, 16, (file, next) => __awaiter(this, void 0, void 0, function* () {
+                core.info(`Uploading file: ${file}`);
+                try {
+                    yield upload_one_file(client, file, dirname, name, inputs.url);
                 }
-            }
-            core.info(`${file} has been uploaded`);
-            next();
-        }));
-        core.info('All files are uploaded ');
+                catch (e) {
+                    if (e instanceof Error) {
+                        return next(e);
+                    }
+                }
+                core.info(`${file} has been uploaded`);
+                next();
+            }));
+        }
+        finally {
+            core.endGroup();
+        }
+        core.info(`All ${requests.length} files are uploaded`);
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
         yield (0, artifacts_1.setNotice)(name, inputs.url);
     });
 }
-exports.upload = upload;
 function get(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const pattern = yield (0, artifacts_1.artifactsPatternName)(inputs.workflow_name);
@@ -709,7 +714,6 @@ function get(inputs) {
         }
     });
 }
-exports.get = get;
 function index(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const client = axios_1.default.create({
@@ -728,7 +732,6 @@ function index(inputs) {
         core.info(`Index has been set`);
     });
 }
-exports.index = index;
 
 
 /***/ }),
@@ -774,7 +777,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getCommitSha1 = exports.artifactsIndexRequestRetry = exports.artifactsRetry = exports.exponentialDelay = exports.retryArtifacts = exports.debugAxiosError = void 0;
+exports.debugAxiosError = debugAxiosError;
+exports.retryArtifacts = retryArtifacts;
+exports.exponentialDelay = exponentialDelay;
+exports.artifactsRetry = artifactsRetry;
+exports.artifactsIndexRequestRetry = artifactsIndexRequestRetry;
+exports.getCommitSha1 = getCommitSha1;
 const core = __importStar(__nccwpck_require__(2186));
 const rest_1 = __nccwpck_require__(5375);
 const fs_1 = __importDefault(__nccwpck_require__(7147));
@@ -789,19 +797,16 @@ function debugAxiosError(error) {
         `data: ${(_d = error.response) === null || _d === void 0 ? void 0 : _d.data}`;
     core.info(debug);
 }
-exports.debugAxiosError = debugAxiosError;
 function retryArtifacts(error) {
     return (error.code !== 'ECONNABORTED' &&
         (!error.response ||
             (error.response.status >= 500 && error.response.status <= 599)));
 }
-exports.retryArtifacts = retryArtifacts;
 function exponentialDelay(retryNumber = 0) {
     const delay = Math.pow(2, retryNumber) * 100;
     const randomSum = delay * 0.2 * Math.random();
     return delay + randomSum;
 }
-exports.exponentialDelay = exponentialDelay;
 function artifactsRetry(client, retries = 10) {
     let counter = 0;
     const maxRetry = retries;
@@ -822,9 +827,8 @@ function artifactsRetry(client, retries = 10) {
         return Promise.reject(error);
     }));
 }
-exports.artifactsRetry = artifactsRetry;
-function artifactsIndexRequestRetry(client, retries = 10) {
-    return __awaiter(this, void 0, void 0, function* () {
+function artifactsIndexRequestRetry(client_1) {
+    return __awaiter(this, arguments, void 0, function* (client, retries = 10) {
         let counter = 0;
         const maxRetry = retries;
         client.interceptors.response.use((response) => __awaiter(this, void 0, void 0, function* () {
@@ -845,10 +849,9 @@ function artifactsIndexRequestRetry(client, retries = 10) {
         }), undefined);
     });
 }
-exports.artifactsIndexRequestRetry = artifactsIndexRequestRetry;
 function getCommitSha1(revspec) {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         let sha = '';
         try {
             if (github_1.context.eventName === 'pull_request') {
@@ -871,7 +874,6 @@ function getCommitSha1(revspec) {
         return sha;
     });
 }
-exports.getCommitSha1 = getCommitSha1;
 
 
 /***/ }),
@@ -8158,6 +8160,8 @@ AsyncLock.prototype.acquire = function (key, fn, cb, opts) {
 		exec = process.domain.bind(exec);
 	}
 
+	var maxPending = opts.maxPending || self.maxPending;
+
 	if (!self.queues[key]) {
 		self.queues[key] = [];
 		exec(true);
@@ -8167,7 +8171,7 @@ AsyncLock.prototype.acquire = function (key, fn, cb, opts) {
 		// Since lock is re-enterable
 		exec(false);
 	}
-	else if (self.queues[key].length >= self.maxPending) {
+	else if (self.queues[key].length >= maxPending) {
 		done(false, new Error('Too many pending tasks in queue ' + key));
 	}
 	else {
@@ -8555,7 +8559,6 @@ module.exports = AsyncLock;
     // A temporary value used to identify if the loop should be broken.
     // See #1064, #1293
     const breakLoop = {};
-    var breakLoop$1 = breakLoop;
 
     function once(fn) {
         function wrapper (...args) {
@@ -8666,7 +8669,7 @@ module.exports = AsyncLock;
                 return
             }
 
-            if (result === breakLoop$1 || (done && running <= 0)) {
+            if (result === breakLoop || (done && running <= 0)) {
                 done = true;
                 //console.log('done iterCb')
                 return callback(null);
@@ -8716,7 +8719,7 @@ module.exports = AsyncLock;
                     done = true;
                     canceled = true;
                 }
-                else if (value === breakLoop$1 || (done && running <= 0)) {
+                else if (value === breakLoop || (done && running <= 0)) {
                     done = true;
                     return callback(null);
                 }
@@ -8791,7 +8794,7 @@ module.exports = AsyncLock;
             if (canceled === true) return
             if (err) {
                 callback(err);
-            } else if ((++completed === length) || value === breakLoop$1) {
+            } else if ((++completed === length) || value === breakLoop) {
                 callback(null);
             }
         }
@@ -9487,8 +9490,8 @@ module.exports = AsyncLock;
         return callback[PROMISE_SYMBOL]
     }
 
-    var FN_ARGS = /^(?:async\s+)?(?:function)?\s*\w*\s*\(\s*([^)]+)\s*\)(?:\s*{)/;
-    var ARROW_FN_ARGS = /^(?:async\s+)?\(?\s*([^)=]+)\s*\)?(?:\s*=>)/;
+    var FN_ARGS = /^(?:async\s)?(?:function)?\s*(?:\w+\s*)?\(([^)]+)\)(?:\s*{)/;
+    var ARROW_FN_ARGS = /^(?:async\s)?\s*(?:\(\s*)?((?:[^)=\s]\s*)*)(?:\)\s*)?=>/;
     var FN_ARG_SPLIT = /,/;
     var FN_ARG = /(=.+)?(\s*)$/;
 
@@ -10611,7 +10614,7 @@ module.exports = AsyncLock;
                     if (check(result) && !testResult) {
                         testPassed = true;
                         testResult = getResult(true, value);
-                        return callback(null, breakLoop$1);
+                        return callback(null, breakLoop);
                     }
                     callback();
                 });
@@ -15567,6 +15570,8 @@ function useColors() {
 		return false;
 	}
 
+	let m;
+
 	// Is webkit? http://stackoverflow.com/a/16459606/376773
 	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
 	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
@@ -15574,7 +15579,7 @@ function useColors() {
 		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
 		// Is firefox >= v31?
 		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
+		(typeof navigator !== 'undefined' && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31) ||
 		// Double check webkit in userAgent just in case we are in a worker
 		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
 }
@@ -16203,11 +16208,11 @@ function getDate() {
 }
 
 /**
- * Invokes `util.format()` with the specified arguments and writes to stderr.
+ * Invokes `util.formatWithOptions()` with the specified arguments and writes to stderr.
  */
 
 function log(...args) {
-	return process.stderr.write(util.format(...args) + '\n');
+	return process.stderr.write(util.formatWithOptions(exports.inspectOpts, ...args) + '\n');
 }
 
 /**
@@ -20208,7 +20213,7 @@ var y = d * 365.25;
  * @api public
  */
 
-module.exports = function(val, options) {
+module.exports = function (val, options) {
   options = options || {};
   var type = typeof val;
   if (type === 'string' && val.length > 0) {
@@ -52926,7 +52931,7 @@ module.exports = parseParams
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
-// Axios v1.7.2 Copyright (c) 2024 Matt Zabriskie and contributors
+// Axios v1.7.9 Copyright (c) 2024 Matt Zabriskie and contributors
 
 
 const FormData$1 = __nccwpck_require__(4334);
@@ -52944,6 +52949,7 @@ function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'defau
 
 const FormData__default = /*#__PURE__*/_interopDefaultLegacy(FormData$1);
 const url__default = /*#__PURE__*/_interopDefaultLegacy(url);
+const proxyFromEnv__default = /*#__PURE__*/_interopDefaultLegacy(proxyFromEnv);
 const http__default = /*#__PURE__*/_interopDefaultLegacy(http);
 const https__default = /*#__PURE__*/_interopDefaultLegacy(https);
 const util__default = /*#__PURE__*/_interopDefaultLegacy(util);
@@ -53624,6 +53630,36 @@ const isAsyncFn = kindOfTest('AsyncFunction');
 const isThenable = (thing) =>
   thing && (isObject(thing) || isFunction(thing)) && isFunction(thing.then) && isFunction(thing.catch);
 
+// original code
+// https://github.com/DigitalBrainJS/AxiosPromise/blob/16deab13710ec09779922131f3fa5954320f83ab/lib/utils.js#L11-L34
+
+const _setImmediate = ((setImmediateSupported, postMessageSupported) => {
+  if (setImmediateSupported) {
+    return setImmediate;
+  }
+
+  return postMessageSupported ? ((token, callbacks) => {
+    _global.addEventListener("message", ({source, data}) => {
+      if (source === _global && data === token) {
+        callbacks.length && callbacks.shift()();
+      }
+    }, false);
+
+    return (cb) => {
+      callbacks.push(cb);
+      _global.postMessage(token, "*");
+    }
+  })(`axios@${Math.random()}`, []) : (cb) => setTimeout(cb);
+})(
+  typeof setImmediate === 'function',
+  isFunction(_global.postMessage)
+);
+
+const asap = typeof queueMicrotask !== 'undefined' ?
+  queueMicrotask.bind(_global) : ( typeof process !== 'undefined' && process.nextTick || _setImmediate);
+
+// *********************
+
 const utils$1 = {
   isArray,
   isArrayBuffer,
@@ -53679,7 +53715,9 @@ const utils$1 = {
   isSpecCompliantForm,
   toJSONObject,
   isAsyncFn,
-  isThenable
+  isThenable,
+  setImmediate: _setImmediate,
+  asap
 };
 
 /**
@@ -53707,7 +53745,10 @@ function AxiosError(message, code, config, request, response) {
   code && (this.code = code);
   config && (this.config = config);
   request && (this.request = request);
-  response && (this.response = response);
+  if (response) {
+    this.response = response;
+    this.status = response.status ? response.status : null;
+  }
 }
 
 utils$1.inherits(AxiosError, Error, {
@@ -53727,7 +53768,7 @@ utils$1.inherits(AxiosError, Error, {
       // Axios
       config: utils$1.toJSONObject(this.config),
       code: this.code,
-      status: this.response && this.response.status ? this.response.status : null
+      status: this.status
     };
   }
 });
@@ -54064,7 +54105,7 @@ function encode(val) {
  *
  * @param {string} url The base of the url (e.g., http://www.google.com)
  * @param {object} [params] The params to be appended
- * @param {?object} options
+ * @param {?(object|Function)} options
  *
  * @returns {string} The formatted url
  */
@@ -54075,6 +54116,12 @@ function buildURL(url, params, options) {
   }
   
   const _encode = options && options.encode || encode;
+
+  if (utils$1.isFunction(options)) {
+    options = {
+      serialize: options
+    };
+  } 
 
   const serializeFn = options && options.serialize;
 
@@ -54188,6 +54235,8 @@ const platform$1 = {
 
 const hasBrowserEnv = typeof window !== 'undefined' && typeof document !== 'undefined';
 
+const _navigator = typeof navigator === 'object' && navigator || undefined;
+
 /**
  * Determine if we're running in a standard browser environment
  *
@@ -54205,10 +54254,8 @@ const hasBrowserEnv = typeof window !== 'undefined' && typeof document !== 'unde
  *
  * @returns {boolean}
  */
-const hasStandardBrowserEnv = (
-  (product) => {
-    return hasBrowserEnv && ['ReactNative', 'NativeScript', 'NS'].indexOf(product) < 0
-  })(typeof navigator !== 'undefined' && navigator.product);
+const hasStandardBrowserEnv = hasBrowserEnv &&
+  (!_navigator || ['ReactNative', 'NativeScript', 'NS'].indexOf(_navigator.product) < 0);
 
 /**
  * Determine if we're running in a standard browser webWorker environment
@@ -54235,6 +54282,7 @@ const utils = /*#__PURE__*/Object.freeze({
   hasBrowserEnv: hasBrowserEnv,
   hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
   hasStandardBrowserEnv: hasStandardBrowserEnv,
+  navigator: _navigator,
   origin: origin
 });
 
@@ -54963,7 +55011,7 @@ function buildFullPath(baseURL, requestedURL) {
   return requestedURL;
 }
 
-const VERSION = "1.7.2";
+const VERSION = "1.7.9";
 
 function parseProtocol(url) {
   const match = /^([-+\w]{1,25})(:?\/\/|:)/.exec(url);
@@ -55018,90 +55066,6 @@ function fromDataURI(uri, asBlob, options) {
   throw new AxiosError('Unsupported protocol ' + protocol, AxiosError.ERR_NOT_SUPPORT);
 }
 
-/**
- * Throttle decorator
- * @param {Function} fn
- * @param {Number} freq
- * @return {Function}
- */
-function throttle(fn, freq) {
-  let timestamp = 0;
-  const threshold = 1000 / freq;
-  let timer = null;
-  return function throttled() {
-    const force = this === true;
-
-    const now = Date.now();
-    if (force || now - timestamp > threshold) {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      timestamp = now;
-      return fn.apply(null, arguments);
-    }
-    if (!timer) {
-      timer = setTimeout(() => {
-        timer = null;
-        timestamp = Date.now();
-        return fn.apply(null, arguments);
-      }, threshold - (now - timestamp));
-    }
-  };
-}
-
-/**
- * Calculate data maxRate
- * @param {Number} [samplesCount= 10]
- * @param {Number} [min= 1000]
- * @returns {Function}
- */
-function speedometer(samplesCount, min) {
-  samplesCount = samplesCount || 10;
-  const bytes = new Array(samplesCount);
-  const timestamps = new Array(samplesCount);
-  let head = 0;
-  let tail = 0;
-  let firstSampleTS;
-
-  min = min !== undefined ? min : 1000;
-
-  return function push(chunkLength) {
-    const now = Date.now();
-
-    const startedAt = timestamps[tail];
-
-    if (!firstSampleTS) {
-      firstSampleTS = now;
-    }
-
-    bytes[head] = chunkLength;
-    timestamps[head] = now;
-
-    let i = tail;
-    let bytesCount = 0;
-
-    while (i !== head) {
-      bytesCount += bytes[i++];
-      i = i % samplesCount;
-    }
-
-    head = (head + 1) % samplesCount;
-
-    if (head === tail) {
-      tail = (tail + 1) % samplesCount;
-    }
-
-    if (now - firstSampleTS < min) {
-      return;
-    }
-
-    const passed = startedAt && now - startedAt;
-
-    return passed ? Math.round(bytesCount * 1000 / passed) : undefined;
-  };
-}
-
 const kInternals = Symbol('internals');
 
 class AxiosTransformStream extends stream__default["default"].Transform{
@@ -55121,12 +55085,8 @@ class AxiosTransformStream extends stream__default["default"].Transform{
       readableHighWaterMark: options.chunkSize
     });
 
-    const self = this;
-
     const internals = this[kInternals] = {
-      length: options.length,
       timeWindow: options.timeWindow,
-      ticksRate: options.ticksRate,
       chunkSize: options.chunkSize,
       maxRate: options.maxRate,
       minChunkSize: options.minChunkSize,
@@ -55138,8 +55098,6 @@ class AxiosTransformStream extends stream__default["default"].Transform{
       onReadCallback: null
     };
 
-    const _speedometer = speedometer(internals.ticksRate * options.samplesCount, internals.timeWindow);
-
     this.on('newListener', event => {
       if (event === 'progress') {
         if (!internals.isCaptured) {
@@ -55147,39 +55105,6 @@ class AxiosTransformStream extends stream__default["default"].Transform{
         }
       }
     });
-
-    let bytesNotified = 0;
-
-    internals.updateProgress = throttle(function throttledHandler() {
-      const totalBytes = internals.length;
-      const bytesTransferred = internals.bytesSeen;
-      const progressBytes = bytesTransferred - bytesNotified;
-      if (!progressBytes || self.destroyed) return;
-
-      const rate = _speedometer(progressBytes);
-
-      bytesNotified = bytesTransferred;
-
-      process.nextTick(() => {
-        self.emit('progress', {
-          loaded: bytesTransferred,
-          total: totalBytes,
-          progress: totalBytes ? (bytesTransferred / totalBytes) : undefined,
-          bytes: progressBytes,
-          rate: rate ? rate : undefined,
-          estimated: rate && totalBytes && bytesTransferred <= totalBytes ?
-            (totalBytes - bytesTransferred) / rate : undefined,
-          lengthComputable: totalBytes != null
-        });
-      });
-    }, internals.ticksRate);
-
-    const onFinish = () => {
-      internals.updateProgress.call(true);
-    };
-
-    this.once('end', onFinish);
-    this.once('error', onFinish);
   }
 
   _read(size) {
@@ -55193,7 +55118,6 @@ class AxiosTransformStream extends stream__default["default"].Transform{
   }
 
   _transform(chunk, encoding, callback) {
-    const self = this;
     const internals = this[kInternals];
     const maxRate = internals.maxRate;
 
@@ -55205,16 +55129,14 @@ class AxiosTransformStream extends stream__default["default"].Transform{
     const bytesThreshold = (maxRate / divider);
     const minChunkSize = internals.minChunkSize !== false ? Math.max(internals.minChunkSize, bytesThreshold * 0.01) : 0;
 
-    function pushChunk(_chunk, _callback) {
+    const pushChunk = (_chunk, _callback) => {
       const bytes = Buffer.byteLength(_chunk);
       internals.bytesSeen += bytes;
       internals.bytes += bytes;
 
-      if (internals.isCaptured) {
-        internals.updateProgress();
-      }
+      internals.isCaptured && this.emit('progress', internals.bytesSeen);
 
-      if (self.push(_chunk)) {
+      if (this.push(_chunk)) {
         process.nextTick(_callback);
       } else {
         internals.onReadCallback = () => {
@@ -55222,7 +55144,7 @@ class AxiosTransformStream extends stream__default["default"].Transform{
           process.nextTick(_callback);
         };
       }
-    }
+    };
 
     const transformChunk = (_chunk, _callback) => {
       const chunkSize = Buffer.byteLength(_chunk);
@@ -55279,11 +55201,6 @@ class AxiosTransformStream extends stream__default["default"].Transform{
       }
     });
   }
-
-  setLength(length) {
-    this[kInternals].length = +length;
-    return this;
-  }
 }
 
 const AxiosTransformStream$1 = AxiosTransformStream;
@@ -55306,7 +55223,7 @@ const readBlob$1 = readBlob;
 
 const BOUNDARY_ALPHABET = utils$1.ALPHABET.ALPHA_DIGIT + '-_';
 
-const textEncoder = new util.TextEncoder();
+const textEncoder = typeof TextEncoder === 'function' ? new TextEncoder() : new util__default["default"].TextEncoder();
 
 const CRLF = '\r\n';
 const CRLF_BYTES = textEncoder.encode(CRLF);
@@ -55451,6 +55368,142 @@ const callbackify = (fn, reducer) => {
 
 const callbackify$1 = callbackify;
 
+/**
+ * Calculate data maxRate
+ * @param {Number} [samplesCount= 10]
+ * @param {Number} [min= 1000]
+ * @returns {Function}
+ */
+function speedometer(samplesCount, min) {
+  samplesCount = samplesCount || 10;
+  const bytes = new Array(samplesCount);
+  const timestamps = new Array(samplesCount);
+  let head = 0;
+  let tail = 0;
+  let firstSampleTS;
+
+  min = min !== undefined ? min : 1000;
+
+  return function push(chunkLength) {
+    const now = Date.now();
+
+    const startedAt = timestamps[tail];
+
+    if (!firstSampleTS) {
+      firstSampleTS = now;
+    }
+
+    bytes[head] = chunkLength;
+    timestamps[head] = now;
+
+    let i = tail;
+    let bytesCount = 0;
+
+    while (i !== head) {
+      bytesCount += bytes[i++];
+      i = i % samplesCount;
+    }
+
+    head = (head + 1) % samplesCount;
+
+    if (head === tail) {
+      tail = (tail + 1) % samplesCount;
+    }
+
+    if (now - firstSampleTS < min) {
+      return;
+    }
+
+    const passed = startedAt && now - startedAt;
+
+    return passed ? Math.round(bytesCount * 1000 / passed) : undefined;
+  };
+}
+
+/**
+ * Throttle decorator
+ * @param {Function} fn
+ * @param {Number} freq
+ * @return {Function}
+ */
+function throttle(fn, freq) {
+  let timestamp = 0;
+  let threshold = 1000 / freq;
+  let lastArgs;
+  let timer;
+
+  const invoke = (args, now = Date.now()) => {
+    timestamp = now;
+    lastArgs = null;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    fn.apply(null, args);
+  };
+
+  const throttled = (...args) => {
+    const now = Date.now();
+    const passed = now - timestamp;
+    if ( passed >= threshold) {
+      invoke(args, now);
+    } else {
+      lastArgs = args;
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null;
+          invoke(lastArgs);
+        }, threshold - passed);
+      }
+    }
+  };
+
+  const flush = () => lastArgs && invoke(lastArgs);
+
+  return [throttled, flush];
+}
+
+const progressEventReducer = (listener, isDownloadStream, freq = 3) => {
+  let bytesNotified = 0;
+  const _speedometer = speedometer(50, 250);
+
+  return throttle(e => {
+    const loaded = e.loaded;
+    const total = e.lengthComputable ? e.total : undefined;
+    const progressBytes = loaded - bytesNotified;
+    const rate = _speedometer(progressBytes);
+    const inRange = loaded <= total;
+
+    bytesNotified = loaded;
+
+    const data = {
+      loaded,
+      total,
+      progress: total ? (loaded / total) : undefined,
+      bytes: progressBytes,
+      rate: rate ? rate : undefined,
+      estimated: rate && total && inRange ? (total - loaded) / rate : undefined,
+      event: e,
+      lengthComputable: total != null,
+      [isDownloadStream ? 'download' : 'upload']: true
+    };
+
+    listener(data);
+  }, freq);
+};
+
+const progressEventDecorator = (total, throttled) => {
+  const lengthComputable = total != null;
+
+  return [(loaded) => throttled[0]({
+    lengthComputable,
+    total,
+    loaded
+  }), throttled[1]];
+};
+
+const asyncDecorator = (fn) => (...args) => utils$1.asap(() => fn(...args));
+
 const zlibOptions = {
   flush: zlib__default["default"].constants.Z_SYNC_FLUSH,
   finishFlush: zlib__default["default"].constants.Z_SYNC_FLUSH
@@ -55470,6 +55523,14 @@ const isHttps = /https:?/;
 const supportedProtocols = platform.protocols.map(protocol => {
   return protocol + ':';
 });
+
+const flushOnFinish = (stream, [throttled, flush]) => {
+  stream
+    .on('end', flush)
+    .on('error', flush);
+
+  return throttled;
+};
 
 /**
  * If the proxy or config beforeRedirects functions are defined, call them with the options
@@ -55500,7 +55561,7 @@ function dispatchBeforeRedirect(options, responseDetails) {
 function setProxy(options, configProxy, location) {
   let proxy = configProxy;
   if (!proxy && proxy !== false) {
-    const proxyUrl = proxyFromEnv.getProxyForUrl(location);
+    const proxyUrl = proxyFromEnv__default["default"].getProxyForUrl(location);
     if (proxyUrl) {
       proxy = new URL(proxyUrl);
     }
@@ -55646,7 +55707,7 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
 
     // Parse url
     const fullPath = buildFullPath(config.baseURL, config.url);
-    const parsed = new URL(fullPath, 'http://localhost');
+    const parsed = new URL(fullPath, platform.hasBrowserEnv ? platform.origin : undefined);
     const protocol = parsed.protocol || supportedProtocols[0];
 
     if (protocol === 'data:') {
@@ -55704,8 +55765,7 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
     // Only set header if it hasn't been set in config
     headers.set('User-Agent', 'axios/' + VERSION, false);
 
-    const onDownloadProgress = config.onDownloadProgress;
-    const onUploadProgress = config.onUploadProgress;
+    const {onUploadProgress, onDownloadProgress} = config;
     const maxRate = config.maxRate;
     let maxUploadRate = undefined;
     let maxDownloadRate = undefined;
@@ -55732,7 +55792,7 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
         } catch (e) {
         }
       }
-    } else if (utils$1.isBlob(data)) {
+    } else if (utils$1.isBlob(data) || utils$1.isFile(data)) {
       data.size && headers.setContentType(data.type || 'application/octet-stream');
       headers.setContentLength(data.size || 0);
       data = stream__default["default"].Readable.from(readBlob$1(data));
@@ -55776,15 +55836,16 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
       }
 
       data = stream__default["default"].pipeline([data, new AxiosTransformStream$1({
-        length: contentLength,
         maxRate: utils$1.toFiniteNumber(maxUploadRate)
       })], utils$1.noop);
 
-      onUploadProgress && data.on('progress', progress => {
-        onUploadProgress(Object.assign(progress, {
-          upload: true
-        }));
-      });
+      onUploadProgress && data.on('progress', flushOnFinish(
+        data,
+        progressEventDecorator(
+          contentLength,
+          progressEventReducer(asyncDecorator(onUploadProgress), false, 3)
+        )
+      ));
     }
 
     // HTTP basic authentication
@@ -55842,7 +55903,7 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
     if (config.socketPath) {
       options.socketPath = config.socketPath;
     } else {
-      options.hostname = parsed.hostname;
+      options.hostname = parsed.hostname.startsWith("[") ? parsed.hostname.slice(1, -1) : parsed.hostname;
       options.port = parsed.port;
       setProxy(options, config.proxy, protocol + '//' + parsed.hostname + (parsed.port ? ':' + parsed.port : '') + options.path);
     }
@@ -55883,17 +55944,18 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
 
       const responseLength = +res.headers['content-length'];
 
-      if (onDownloadProgress) {
+      if (onDownloadProgress || maxDownloadRate) {
         const transformStream = new AxiosTransformStream$1({
-          length: utils$1.toFiniteNumber(responseLength),
           maxRate: utils$1.toFiniteNumber(maxDownloadRate)
         });
 
-        onDownloadProgress && transformStream.on('progress', progress => {
-          onDownloadProgress(Object.assign(progress, {
-            download: true
-          }));
-        });
+        onDownloadProgress && transformStream.on('progress', flushOnFinish(
+          transformStream,
+          progressEventDecorator(
+            responseLength,
+            progressEventReducer(asyncDecorator(onDownloadProgress), true, 3)
+          )
+        ));
 
         streams.push(transformStream);
       }
@@ -55983,7 +56045,7 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
           }
 
           const err = new AxiosError(
-            'maxContentLength size of ' + config.maxContentLength + ' exceeded',
+            'stream has been aborted',
             AxiosError.ERR_BAD_RESPONSE,
             config,
             lastRequest
@@ -56106,98 +56168,18 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
   });
 };
 
-const progressEventReducer = (listener, isDownloadStream, freq = 3) => {
-  let bytesNotified = 0;
-  const _speedometer = speedometer(50, 250);
+const isURLSameOrigin = platform.hasStandardBrowserEnv ? ((origin, isMSIE) => (url) => {
+  url = new URL(url, platform.origin);
 
-  return throttle(e => {
-    const loaded = e.loaded;
-    const total = e.lengthComputable ? e.total : undefined;
-    const progressBytes = loaded - bytesNotified;
-    const rate = _speedometer(progressBytes);
-    const inRange = loaded <= total;
-
-    bytesNotified = loaded;
-
-    const data = {
-      loaded,
-      total,
-      progress: total ? (loaded / total) : undefined,
-      bytes: progressBytes,
-      rate: rate ? rate : undefined,
-      estimated: rate && total && inRange ? (total - loaded) / rate : undefined,
-      event: e,
-      lengthComputable: total != null
-    };
-
-    data[isDownloadStream ? 'download' : 'upload'] = true;
-
-    listener(data);
-  }, freq);
-};
-
-const isURLSameOrigin = platform.hasStandardBrowserEnv ?
-
-// Standard browser envs have full support of the APIs needed to test
-// whether the request URL is of the same origin as current location.
-  (function standardBrowserEnv() {
-    const msie = /(msie|trident)/i.test(navigator.userAgent);
-    const urlParsingNode = document.createElement('a');
-    let originURL;
-
-    /**
-    * Parse a URL to discover its components
-    *
-    * @param {String} url The URL to be parsed
-    * @returns {Object}
-    */
-    function resolveURL(url) {
-      let href = url;
-
-      if (msie) {
-        // IE needs attribute set twice to normalize properties
-        urlParsingNode.setAttribute('href', href);
-        href = urlParsingNode.href;
-      }
-
-      urlParsingNode.setAttribute('href', href);
-
-      // urlParsingNode provides the UrlUtils interface - http://url.spec.whatwg.org/#urlutils
-      return {
-        href: urlParsingNode.href,
-        protocol: urlParsingNode.protocol ? urlParsingNode.protocol.replace(/:$/, '') : '',
-        host: urlParsingNode.host,
-        search: urlParsingNode.search ? urlParsingNode.search.replace(/^\?/, '') : '',
-        hash: urlParsingNode.hash ? urlParsingNode.hash.replace(/^#/, '') : '',
-        hostname: urlParsingNode.hostname,
-        port: urlParsingNode.port,
-        pathname: (urlParsingNode.pathname.charAt(0) === '/') ?
-          urlParsingNode.pathname :
-          '/' + urlParsingNode.pathname
-      };
-    }
-
-    originURL = resolveURL(window.location.href);
-
-    /**
-    * Determine if a URL shares the same origin as the current location
-    *
-    * @param {String} requestURL The URL to test
-    * @returns {boolean} True if URL shares the same origin, otherwise false
-    */
-    return function isURLSameOrigin(requestURL) {
-      const parsed = (utils$1.isString(requestURL)) ? resolveURL(requestURL) : requestURL;
-      return (parsed.protocol === originURL.protocol &&
-          parsed.host === originURL.host);
-    };
-  })() :
-
-  // Non standard browser envs (web workers, react-native) lack needed support.
-  (function nonStandardBrowserEnv() {
-    return function isURLSameOrigin() {
-      return true;
-    };
-  })();
+  return (
+    origin.protocol === url.protocol &&
+    origin.host === url.host &&
+    (isMSIE || origin.port === url.port)
+  );
+})(
+  new URL(platform.origin),
+  platform.navigator && /(msie|trident)/i.test(platform.navigator.userAgent)
+) : () => true;
 
 const cookies = platform.hasStandardBrowserEnv ?
 
@@ -56254,7 +56236,7 @@ function mergeConfig(config1, config2) {
   config2 = config2 || {};
   const config = {};
 
-  function getMergedValue(target, source, caseless) {
+  function getMergedValue(target, source, prop, caseless) {
     if (utils$1.isPlainObject(target) && utils$1.isPlainObject(source)) {
       return utils$1.merge.call({caseless}, target, source);
     } else if (utils$1.isPlainObject(source)) {
@@ -56266,11 +56248,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -56328,7 +56310,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b) => mergeDeepProperties(headersToObject(a), headersToObject(b), true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys(Object.assign({}, config1, config2)), function computeConfigValue(prop) {
@@ -56395,16 +56377,18 @@ const xhrAdapter = isXHRAdapterSupported && function (config) {
     const _config = resolveConfig(config);
     let requestData = _config.data;
     const requestHeaders = AxiosHeaders$1.from(_config.headers).normalize();
-    let {responseType} = _config;
+    let {responseType, onUploadProgress, onDownloadProgress} = _config;
     let onCanceled;
-    function done() {
-      if (_config.cancelToken) {
-        _config.cancelToken.unsubscribe(onCanceled);
-      }
+    let uploadThrottled, downloadThrottled;
+    let flushUpload, flushDownload;
 
-      if (_config.signal) {
-        _config.signal.removeEventListener('abort', onCanceled);
-      }
+    function done() {
+      flushUpload && flushUpload(); // flush events
+      flushDownload && flushDownload(); // flush events
+
+      _config.cancelToken && _config.cancelToken.unsubscribe(onCanceled);
+
+      _config.signal && _config.signal.removeEventListener('abort', onCanceled);
     }
 
     let request = new XMLHttpRequest();
@@ -56474,7 +56458,7 @@ const xhrAdapter = isXHRAdapterSupported && function (config) {
         return;
       }
 
-      reject(new AxiosError('Request aborted', AxiosError.ECONNABORTED, _config, request));
+      reject(new AxiosError('Request aborted', AxiosError.ECONNABORTED, config, request));
 
       // Clean up request
       request = null;
@@ -56484,7 +56468,7 @@ const xhrAdapter = isXHRAdapterSupported && function (config) {
     request.onerror = function handleError() {
       // Real errors are hidden from us by the browser
       // onerror should only fire if it's a network error
-      reject(new AxiosError('Network Error', AxiosError.ERR_NETWORK, _config, request));
+      reject(new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, request));
 
       // Clean up request
       request = null;
@@ -56500,7 +56484,7 @@ const xhrAdapter = isXHRAdapterSupported && function (config) {
       reject(new AxiosError(
         timeoutErrorMessage,
         transitional.clarifyTimeoutError ? AxiosError.ETIMEDOUT : AxiosError.ECONNABORTED,
-        _config,
+        config,
         request));
 
       // Clean up request
@@ -56528,13 +56512,18 @@ const xhrAdapter = isXHRAdapterSupported && function (config) {
     }
 
     // Handle progress if needed
-    if (typeof _config.onDownloadProgress === 'function') {
-      request.addEventListener('progress', progressEventReducer(_config.onDownloadProgress, true));
+    if (onDownloadProgress) {
+      ([downloadThrottled, flushDownload] = progressEventReducer(onDownloadProgress, true));
+      request.addEventListener('progress', downloadThrottled);
     }
 
     // Not all browsers support upload events
-    if (typeof _config.onUploadProgress === 'function' && request.upload) {
-      request.upload.addEventListener('progress', progressEventReducer(_config.onUploadProgress));
+    if (onUploadProgress && request.upload) {
+      ([uploadThrottled, flushUpload] = progressEventReducer(onUploadProgress));
+
+      request.upload.addEventListener('progress', uploadThrottled);
+
+      request.upload.addEventListener('loadend', flushUpload);
     }
 
     if (_config.cancelToken || _config.signal) {
@@ -56569,45 +56558,46 @@ const xhrAdapter = isXHRAdapterSupported && function (config) {
 };
 
 const composeSignals = (signals, timeout) => {
-  let controller = new AbortController();
+  const {length} = (signals = signals ? signals.filter(Boolean) : []);
 
-  let aborted;
+  if (timeout || length) {
+    let controller = new AbortController();
 
-  const onabort = function (cancel) {
-    if (!aborted) {
-      aborted = true;
-      unsubscribe();
-      const err = cancel instanceof Error ? cancel : this.reason;
-      controller.abort(err instanceof AxiosError ? err : new CanceledError(err instanceof Error ? err.message : err));
-    }
-  };
+    let aborted;
 
-  let timer = timeout && setTimeout(() => {
-    onabort(new AxiosError(`timeout ${timeout} of ms exceeded`, AxiosError.ETIMEDOUT));
-  }, timeout);
+    const onabort = function (reason) {
+      if (!aborted) {
+        aborted = true;
+        unsubscribe();
+        const err = reason instanceof Error ? reason : this.reason;
+        controller.abort(err instanceof AxiosError ? err : new CanceledError(err instanceof Error ? err.message : err));
+      }
+    };
 
-  const unsubscribe = () => {
-    if (signals) {
-      timer && clearTimeout(timer);
+    let timer = timeout && setTimeout(() => {
       timer = null;
-      signals.forEach(signal => {
-        signal &&
-        (signal.removeEventListener ? signal.removeEventListener('abort', onabort) : signal.unsubscribe(onabort));
-      });
-      signals = null;
-    }
-  };
+      onabort(new AxiosError(`timeout ${timeout} of ms exceeded`, AxiosError.ETIMEDOUT));
+    }, timeout);
 
-  signals.forEach((signal) => signal && signal.addEventListener && signal.addEventListener('abort', onabort));
+    const unsubscribe = () => {
+      if (signals) {
+        timer && clearTimeout(timer);
+        timer = null;
+        signals.forEach(signal => {
+          signal.unsubscribe ? signal.unsubscribe(onabort) : signal.removeEventListener('abort', onabort);
+        });
+        signals = null;
+      }
+    };
 
-  const {signal} = controller;
+    signals.forEach((signal) => signal.addEventListener('abort', onabort));
 
-  signal.unsubscribe = unsubscribe;
+    const {signal} = controller;
 
-  return [signal, () => {
-    timer && clearTimeout(timer);
-    timer = null;
-  }];
+    signal.unsubscribe = () => utils$1.asap(unsubscribe);
+
+    return signal;
+  }
 };
 
 const composeSignals$1 = composeSignals;
@@ -56630,49 +56620,73 @@ const streamChunk = function* (chunk, chunkSize) {
   }
 };
 
-const readBytes = async function* (iterable, chunkSize, encode) {
-  for await (const chunk of iterable) {
-    yield* streamChunk(ArrayBuffer.isView(chunk) ? chunk : (await encode(String(chunk))), chunkSize);
+const readBytes = async function* (iterable, chunkSize) {
+  for await (const chunk of readStream(iterable)) {
+    yield* streamChunk(chunk, chunkSize);
   }
 };
 
-const trackStream = (stream, chunkSize, onProgress, onFinish, encode) => {
-  const iterator = readBytes(stream, chunkSize, encode);
+const readStream = async function* (stream) {
+  if (stream[Symbol.asyncIterator]) {
+    yield* stream;
+    return;
+  }
+
+  const reader = stream.getReader();
+  try {
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) {
+        break;
+      }
+      yield value;
+    }
+  } finally {
+    await reader.cancel();
+  }
+};
+
+const trackStream = (stream, chunkSize, onProgress, onFinish) => {
+  const iterator = readBytes(stream, chunkSize);
 
   let bytes = 0;
+  let done;
+  let _onFinish = (e) => {
+    if (!done) {
+      done = true;
+      onFinish && onFinish(e);
+    }
+  };
 
   return new ReadableStream({
-    type: 'bytes',
-
     async pull(controller) {
-      const {done, value} = await iterator.next();
+      try {
+        const {done, value} = await iterator.next();
 
-      if (done) {
-        controller.close();
-        onFinish();
-        return;
+        if (done) {
+         _onFinish();
+          controller.close();
+          return;
+        }
+
+        let len = value.byteLength;
+        if (onProgress) {
+          let loadedBytes = bytes += len;
+          onProgress(loadedBytes);
+        }
+        controller.enqueue(new Uint8Array(value));
+      } catch (err) {
+        _onFinish(err);
+        throw err;
       }
-
-      let len = value.byteLength;
-      onProgress && onProgress(bytes += len);
-      controller.enqueue(new Uint8Array(value));
     },
     cancel(reason) {
-      onFinish(reason);
+      _onFinish(reason);
       return iterator.return();
     }
   }, {
     highWaterMark: 2
   })
-};
-
-const fetchProgressDecorator = (total, fn) => {
-  const lengthComputable = total != null;
-  return (loaded) => setTimeout(() => fn({
-    lengthComputable,
-    total,
-    loaded
-  }));
 };
 
 const isFetchSupported = typeof fetch === 'function' && typeof Request === 'function' && typeof Response === 'function';
@@ -56684,7 +56698,15 @@ const encodeText = isFetchSupported && (typeof TextEncoder === 'function' ?
     async (str) => new Uint8Array(await new Response(str).arrayBuffer())
 );
 
-const supportsRequestStream = isReadableStreamSupported && (() => {
+const test = (fn, ...args) => {
+  try {
+    return !!fn(...args);
+  } catch (e) {
+    return false
+  }
+};
+
+const supportsRequestStream = isReadableStreamSupported && test(() => {
   let duplexAccessed = false;
 
   const hasContentType = new Request(platform.origin, {
@@ -56697,17 +56719,13 @@ const supportsRequestStream = isReadableStreamSupported && (() => {
   }).headers.has('Content-Type');
 
   return duplexAccessed && !hasContentType;
-})();
+});
 
 const DEFAULT_CHUNK_SIZE = 64 * 1024;
 
-const supportsResponseStream = isReadableStreamSupported && !!(()=> {
-  try {
-    return utils$1.isReadableStream(new Response('').body);
-  } catch(err) {
-    // return undefined
-  }
-})();
+const supportsResponseStream = isReadableStreamSupported &&
+  test(() => utils$1.isReadableStream(new Response('').body));
+
 
 const resolvers = {
   stream: supportsResponseStream && ((res) => res.body)
@@ -56732,10 +56750,14 @@ const getBodyLength = async (body) => {
   }
 
   if(utils$1.isSpecCompliantForm(body)) {
-    return (await new Request(body).arrayBuffer()).byteLength;
+    const _request = new Request(platform.origin, {
+      method: 'POST',
+      body,
+    });
+    return (await _request.arrayBuffer()).byteLength;
   }
 
-  if(utils$1.isArrayBufferView(body)) {
+  if(utils$1.isArrayBufferView(body) || utils$1.isArrayBuffer(body)) {
     return body.byteLength;
   }
 
@@ -56772,18 +56794,13 @@ const fetchAdapter = isFetchSupported && (async (config) => {
 
   responseType = responseType ? (responseType + '').toLowerCase() : 'text';
 
-  let [composedSignal, stopTimeout] = (signal || cancelToken || timeout) ?
-    composeSignals$1([signal, cancelToken], timeout) : [];
+  let composedSignal = composeSignals$1([signal, cancelToken && cancelToken.toAbortSignal()], timeout);
 
-  let finished, request;
+  let request;
 
-  const onFinish = () => {
-    !finished && setTimeout(() => {
-      composedSignal && composedSignal.unsubscribe();
-    });
-
-    finished = true;
-  };
+  const unsubscribe = composedSignal && composedSignal.unsubscribe && (() => {
+      composedSignal.unsubscribe();
+  });
 
   let requestContentLength;
 
@@ -56805,17 +56822,22 @@ const fetchAdapter = isFetchSupported && (async (config) => {
       }
 
       if (_request.body) {
-        data = trackStream(_request.body, DEFAULT_CHUNK_SIZE, fetchProgressDecorator(
+        const [onProgress, flush] = progressEventDecorator(
           requestContentLength,
-          progressEventReducer(onUploadProgress)
-        ), null, encodeText);
+          progressEventReducer(asyncDecorator(onUploadProgress))
+        );
+
+        data = trackStream(_request.body, DEFAULT_CHUNK_SIZE, onProgress, flush);
       }
     }
 
     if (!utils$1.isString(withCredentials)) {
-      withCredentials = withCredentials ? 'cors' : 'omit';
+      withCredentials = withCredentials ? 'include' : 'omit';
     }
 
+    // Cloudflare Workers throws when credentials are defined
+    // see https://github.com/cloudflare/workerd/issues/902
+    const isCredentialsSupported = "credentials" in Request.prototype;
     request = new Request(url, {
       ...fetchOptions,
       signal: composedSignal,
@@ -56823,14 +56845,14 @@ const fetchAdapter = isFetchSupported && (async (config) => {
       headers: headers.normalize().toJSON(),
       body: data,
       duplex: "half",
-      withCredentials
+      credentials: isCredentialsSupported ? withCredentials : undefined
     });
 
     let response = await fetch(request);
 
     const isStreamResponse = supportsResponseStream && (responseType === 'stream' || responseType === 'response');
 
-    if (supportsResponseStream && (onDownloadProgress || isStreamResponse)) {
+    if (supportsResponseStream && (onDownloadProgress || (isStreamResponse && unsubscribe))) {
       const options = {};
 
       ['status', 'statusText', 'headers'].forEach(prop => {
@@ -56839,11 +56861,16 @@ const fetchAdapter = isFetchSupported && (async (config) => {
 
       const responseContentLength = utils$1.toFiniteNumber(response.headers.get('content-length'));
 
+      const [onProgress, flush] = onDownloadProgress && progressEventDecorator(
+        responseContentLength,
+        progressEventReducer(asyncDecorator(onDownloadProgress), true)
+      ) || [];
+
       response = new Response(
-        trackStream(response.body, DEFAULT_CHUNK_SIZE, onDownloadProgress && fetchProgressDecorator(
-          responseContentLength,
-          progressEventReducer(onDownloadProgress, true)
-        ), isStreamResponse && onFinish, encodeText),
+        trackStream(response.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
+          flush && flush();
+          unsubscribe && unsubscribe();
+        }),
         options
       );
     }
@@ -56852,9 +56879,7 @@ const fetchAdapter = isFetchSupported && (async (config) => {
 
     let responseData = await resolvers[utils$1.findKey(resolvers, responseType) || 'text'](response, config);
 
-    !isStreamResponse && onFinish();
-
-    stopTimeout && stopTimeout();
+    !isStreamResponse && unsubscribe && unsubscribe();
 
     return await new Promise((resolve, reject) => {
       settle(resolve, reject, {
@@ -56867,7 +56892,7 @@ const fetchAdapter = isFetchSupported && (async (config) => {
       });
     })
   } catch (err) {
-    onFinish();
+    unsubscribe && unsubscribe();
 
     if (err && err.name === 'TypeError' && /fetch/i.test(err.message)) {
       throw Object.assign(
@@ -57078,6 +57103,14 @@ validators$1.transitional = function transitional(validator, version, message) {
   };
 };
 
+validators$1.spelling = function spelling(correctSpelling) {
+  return (value, opt) => {
+    // eslint-disable-next-line no-console
+    console.warn(`${opt} is likely a misspelling of ${correctSpelling}`);
+    return true;
+  }
+};
+
 /**
  * Assert object's properties type
  *
@@ -57147,9 +57180,9 @@ class Axios {
       return await this._request(configOrUrl, config);
     } catch (err) {
       if (err instanceof Error) {
-        let dummy;
+        let dummy = {};
 
-        Error.captureStackTrace ? Error.captureStackTrace(dummy = {}) : (dummy = new Error());
+        Error.captureStackTrace ? Error.captureStackTrace(dummy) : (dummy = new Error());
 
         // slice off the Error: ... line
         const stack = dummy.stack ? dummy.stack.replace(/^.+\n/, '') : '';
@@ -57203,6 +57236,11 @@ class Axios {
         }, true);
       }
     }
+
+    validator.assertOptions(config, {
+      baseUrl: validators.spelling('baseURL'),
+      withXsrfToken: validators.spelling('withXSRFToken')
+    }, true);
 
     // Set config.method
     config.method = (config.method || this.defaults.method || 'get').toLowerCase();
@@ -57432,6 +57470,20 @@ class CancelToken {
     if (index !== -1) {
       this._listeners.splice(index, 1);
     }
+  }
+
+  toAbortSignal() {
+    const controller = new AbortController();
+
+    const abort = (err) => {
+      controller.abort(err);
+    };
+
+    this.subscribe(abort);
+
+    controller.signal.unsubscribe = () => this.unsubscribe(abort);
+
+    return controller.signal;
   }
 
   /**
@@ -57948,6 +58000,39 @@ var diff3Merge = _interopDefault(__nccwpck_require__(5211));
 
 /**
  * @typedef {[string, HeadStatus, WorkdirStatus, StageStatus]} StatusRow
+ */
+
+/**
+ * @typedef {Object} ClientRef
+ * @property {string} ref The name of the ref
+ * @property {string} oid The SHA-1 object id the ref points to
+ */
+
+/**
+ * @typedef {Object} PrePushParams
+ * @property {string} remote The expanded name of target remote
+ * @property {string} url The URL address of target remote
+ * @property {ClientRef} localRef The ref which the client wants to push to the remote
+ * @property {ClientRef} remoteRef The ref which is known by the remote
+ */
+
+/**
+ * @callback PrePushCallback
+ * @param {PrePushParams} args
+ * @returns {boolean | Promise<boolean>} Returns false if push must be cancelled
+ */
+
+/**
+ * @typedef {Object} PostCheckoutParams
+ * @property {string} previousHead The SHA-1 object id of HEAD before checkout
+ * @property {string} newHead The SHA-1 object id of HEAD after checkout
+ * @property {'branch' | 'file'} type flag determining whether a branch or a set of files was checked
+ */
+
+/**
+ * @callback PostCheckoutCallback
+ * @param {PostCheckoutParams} args
+ * @returns {void | Promise<void>}
  */
 
 class BaseError extends Error {
@@ -59173,6 +59258,7 @@ const SECTION_REGEX = /^[A-Za-z0-9-.]+$/;
 const VARIABLE_LINE_REGEX = /^([A-Za-z][A-Za-z-]*)(?: *= *(.*))?$/;
 const VARIABLE_NAME_REGEX = /^[A-Za-z][A-Za-z-]*$/;
 
+// Comments start with either # or ; and extend to the end of line
 const VARIABLE_VALUE_COMMENT_REGEX = /^(.*?)( *[#;].*)$/;
 
 const extractSectionLine = line => {
@@ -60072,6 +60158,10 @@ function getIterator(iterable) {
 // inspired by 'gartal' but lighter-weight and more battle-tested.
 class StreamReader {
   constructor(stream) {
+    // TODO: fix usage in bundlers before Buffer dependency is removed #1855
+    if (typeof Buffer === 'undefined') {
+      throw new Error('Missing Buffer dependency')
+    }
     this.stream = getIterator(stream);
     this.buffer = null;
     this.cursor = 0;
@@ -60774,43 +60864,46 @@ async function _readObject({
       oid,
       getExternalRefDelta,
     });
-  }
-  // Finally
-  if (!result) {
-    throw new NotFoundError(oid)
+
+    if (!result) {
+      throw new NotFoundError(oid)
+    }
+
+    // Directly return packed result, as specified: packed objects always return the 'content' format.
+    return result
   }
 
+  // Loose objects are always deflated, return early
   if (format === 'deflated') {
     return result
   }
 
+  // All loose objects are deflated but the hard-coded empty tree is `wrapped` so we have to check if we need to inflate the object.
   if (result.format === 'deflated') {
     result.object = Buffer.from(await inflate(result.object));
     result.format = 'wrapped';
   }
 
-  if (result.format === 'wrapped') {
-    if (format === 'wrapped' && result.format === 'wrapped') {
-      return result
-    }
-    const sha = await shasum(result.object);
-    if (sha !== oid) {
-      throw new InternalError(
-        `SHA check failed! Expected ${oid}, computed ${sha}`
-      )
-    }
-    const { object, type } = GitObject.unwrap(result.object);
-    result.type = type;
-    result.object = object;
-    result.format = 'content';
+  if (format === 'wrapped') {
+    return result
   }
 
-  if (result.format === 'content') {
-    if (format === 'content') return result
-    return
+  const sha = await shasum(result.object);
+  if (sha !== oid) {
+    throw new InternalError(
+      `SHA check failed! Expected ${oid}, computed ${sha}`
+    )
+  }
+  const { object, type } = GitObject.unwrap(result.object);
+  result.type = type;
+  result.object = object;
+  result.format = 'content';
+
+  if (format === 'content') {
+    return result
   }
 
-  throw new InternalError(`invalid format "${result.format}"`)
+  throw new InternalError(`invalid requested format "${format}"`)
 }
 
 class AlreadyExistsError extends BaseError {
@@ -61179,6 +61272,21 @@ class IndexResetError extends BaseError {
 /** @type {'IndexResetError'} */
 IndexResetError.code = 'IndexResetError';
 
+class NoCommitError extends BaseError {
+  /**
+   * @param {string} ref
+   */
+  constructor(ref) {
+    super(
+      `"${ref}" does not point to any commit. You're maybe working on a repository with no commits yet. `
+    );
+    this.code = this.name = NoCommitError.code;
+    this.data = { ref };
+  }
+}
+/** @type {'NoCommitError'} */
+NoCommitError.code = 'NoCommitError';
+
 
 
 var Errors = /*#__PURE__*/Object.freeze({
@@ -61213,7 +61321,8 @@ var Errors = /*#__PURE__*/Object.freeze({
   UrlParseError: UrlParseError,
   UserCanceledError: UserCanceledError,
   UnmergedPathsError: UnmergedPathsError,
-  IndexResetError: IndexResetError
+  IndexResetError: IndexResetError,
+  NoCommitError: NoCommitError
 });
 
 function formatAuthor({ name, email, timestamp, timezoneOffset }) {
@@ -61848,7 +61957,10 @@ class GitWalkerFs {
         const stats = await entry.stat();
         const config = await GitConfigManager.get({ fs, gitdir });
         const filemode = await config.get('core.filemode');
-        const trustino = !(process.platform === 'win32');
+        const trustino =
+          typeof process !== 'undefined'
+            ? !(process.platform === 'win32')
+            : true;
         if (!stage || compareStats(stats, stage, filemode, trustino)) {
           const content = await entry.content();
           if (content === undefined) {
@@ -62772,24 +62884,196 @@ async function addToIndex({
 // @ts-check
 
 /**
+ * @param {Object} args
+ * @param {import('../models/FileSystem.js').FileSystem} args.fs
+ * @param {string} args.gitdir
+ * @param {string} args.path
+ *
+ * @returns {Promise<any>} Resolves with the config value
+ *
+ * @example
+ * // Read config value
+ * let value = await git.getConfig({
+ *   dir: '$input((/))',
+ *   path: '$input((user.name))'
+ * })
+ * console.log(value)
+ *
+ */
+async function _getConfig({ fs, gitdir, path }) {
+  const config = await GitConfigManager.get({ fs, gitdir });
+  return config.get(path)
+}
+
+// Like Object.assign but ignore properties with undefined values
+// ref: https://stackoverflow.com/q/39513815
+function assignDefined(target, ...sources) {
+  for (const source of sources) {
+    if (source) {
+      for (const key of Object.keys(source)) {
+        const val = source[key];
+        if (val !== undefined) {
+          target[key] = val;
+        }
+      }
+    }
+  }
+  return target
+}
+
+/**
+ * Return author object by using properties following this priority:
+ * (1) provided author object
+ * -> (2) author of provided commit object
+ * -> (3) Config and current date/time
+ *
+ * @param {Object} args
+ * @param {FsClient} args.fs - a file system implementation
+ * @param {string} [args.gitdir] - The [git directory](dir-vs-gitdir.md) path
+ * @param {Object} [args.author] - The author object.
+ * @param {CommitObject} [args.commit] - A commit object.
+ *
+ * @returns {Promise<void | {name: string, email: string, timestamp: number, timezoneOffset: number }>}
+ */
+async function normalizeAuthorObject({ fs, gitdir, author, commit }) {
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  const defaultAuthor = {
+    name: await _getConfig({ fs, gitdir, path: 'user.name' }),
+    email: (await _getConfig({ fs, gitdir, path: 'user.email' })) || '', // author.email is allowed to be empty string
+    timestamp,
+    timezoneOffset: new Date(timestamp * 1000).getTimezoneOffset(),
+  };
+
+  // Populate author object by using properties with this priority:
+  // (1) provided author object
+  // -> (2) author of provided commit object
+  // -> (3) default author
+  const normalizedAuthor = assignDefined(
+    {},
+    defaultAuthor,
+    commit ? commit.author : undefined,
+    author
+  );
+
+  if (normalizedAuthor.name === undefined) {
+    return undefined
+  }
+
+  return normalizedAuthor
+}
+
+/**
+ * Return committer object by using properties with this priority:
+ * (1) provided committer object
+ * -> (2) provided author object
+ * -> (3) committer of provided commit object
+ * -> (4) Config and current date/time
+ *
+ * @param {Object} args
+ * @param {FsClient} args.fs - a file system implementation
+ * @param {string} [args.gitdir] - The [git directory](dir-vs-gitdir.md) path
+ * @param {Object} [args.author] - The author object.
+ * @param {Object} [args.committer] - The committer object.
+ * @param {CommitObject} [args.commit] - A commit object.
+ *
+ * @returns {Promise<void | {name: string, email: string, timestamp: number, timezoneOffset: number }>}
+ */
+async function normalizeCommitterObject({
+  fs,
+  gitdir,
+  author,
+  committer,
+  commit,
+}) {
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  const defaultCommitter = {
+    name: await _getConfig({ fs, gitdir, path: 'user.name' }),
+    email: (await _getConfig({ fs, gitdir, path: 'user.email' })) || '', // committer.email is allowed to be empty string
+    timestamp,
+    timezoneOffset: new Date(timestamp * 1000).getTimezoneOffset(),
+  };
+
+  const normalizedCommitter = assignDefined(
+    {},
+    defaultCommitter,
+    commit ? commit.committer : undefined,
+    author,
+    committer
+  );
+
+  if (normalizedCommitter.name === undefined) {
+    return undefined
+  }
+  return normalizedCommitter
+}
+
+async function resolveCommit({ fs, cache, gitdir, oid }) {
+  const { type, object } = await _readObject({ fs, cache, gitdir, oid });
+  // Resolve annotated tag objects to whatever
+  if (type === 'tag') {
+    oid = GitAnnotatedTag.from(object).parse().object;
+    return resolveCommit({ fs, cache, gitdir, oid })
+  }
+  if (type !== 'commit') {
+    throw new ObjectTypeError(oid, type, 'commit')
+  }
+  return { commit: GitCommit.from(object), oid }
+}
+
+// @ts-check
+
+/**
+ * @param {object} args
+ * @param {import('../models/FileSystem.js').FileSystem} args.fs
+ * @param {any} args.cache
+ * @param {string} args.gitdir
+ * @param {string} args.oid
+ *
+ * @returns {Promise<ReadCommitResult>} Resolves successfully with a git commit object
+ * @see ReadCommitResult
+ * @see CommitObject
+ *
+ */
+async function _readCommit({ fs, cache, gitdir, oid }) {
+  const { commit, oid: commitOid } = await resolveCommit({
+    fs,
+    cache,
+    gitdir,
+    oid,
+  });
+  const result = {
+    oid: commitOid,
+    commit: commit.parse(),
+    payload: commit.withoutSignature(),
+  };
+  // @ts-ignore
+  return result
+}
+
+// @ts-check
+
+/**
  *
  * @param {Object} args
  * @param {import('../models/FileSystem.js').FileSystem} args.fs
  * @param {object} args.cache
  * @param {SignCallback} [args.onSign]
  * @param {string} args.gitdir
- * @param {string} args.message
- * @param {Object} args.author
- * @param {string} args.author.name
- * @param {string} args.author.email
- * @param {number} args.author.timestamp
- * @param {number} args.author.timezoneOffset
- * @param {Object} args.committer
- * @param {string} args.committer.name
- * @param {string} args.committer.email
- * @param {number} args.committer.timestamp
- * @param {number} args.committer.timezoneOffset
+ * @param {string} [args.message]
+ * @param {Object} [args.author]
+ * @param {string} [args.author.name]
+ * @param {string} [args.author.email]
+ * @param {number} [args.author.timestamp]
+ * @param {number} [args.author.timezoneOffset]
+ * @param {Object} [args.committer]
+ * @param {string} [args.committer.name]
+ * @param {string} [args.committer.email]
+ * @param {number} [args.committer.timestamp]
+ * @param {number} [args.committer.timezoneOffset]
  * @param {string} [args.signingKey]
+ * @param {boolean} [args.amend = false]
  * @param {boolean} [args.dryRun = false]
  * @param {boolean} [args.noUpdateBranch = false]
  * @param {string} [args.ref]
@@ -62804,15 +63088,18 @@ async function _commit({
   onSign,
   gitdir,
   message,
-  author,
-  committer,
+  author: _author,
+  committer: _committer,
   signingKey,
+  amend = false,
   dryRun = false,
   noUpdateBranch = false,
   ref,
   parent,
   tree,
 }) {
+  // Determine ref and the commit pointed to by ref, and if it is the initial commit
+  let initialCommit = false;
   if (!ref) {
     ref = await GitRefManager.resolve({
       fs,
@@ -62822,6 +63109,50 @@ async function _commit({
     });
   }
 
+  let refOid, refCommit;
+  try {
+    refOid = await GitRefManager.resolve({
+      fs,
+      gitdir,
+      ref,
+    });
+    refCommit = await _readCommit({ fs, gitdir, oid: refOid, cache: {} });
+  } catch {
+    // We assume that there's no commit and this is the initial commit
+    initialCommit = true;
+  }
+
+  if (amend && initialCommit) {
+    throw new NoCommitError(ref)
+  }
+
+  // Determine author and committer information
+  const author = !amend
+    ? await normalizeAuthorObject({ fs, gitdir, author: _author })
+    : await normalizeAuthorObject({
+        fs,
+        gitdir,
+        author: _author,
+        commit: refCommit.commit,
+      });
+  if (!author) throw new MissingNameError('author')
+
+  const committer = !amend
+    ? await normalizeCommitterObject({
+        fs,
+        gitdir,
+        author,
+        committer: _committer,
+      })
+    : await normalizeCommitterObject({
+        fs,
+        gitdir,
+        author,
+        committer: _committer,
+        commit: refCommit.commit,
+      });
+  if (!committer) throw new MissingNameError('committer')
+
   return GitIndexManager.acquire(
     { fs, gitdir, cache, allowUnmerged: false },
     async function(index) {
@@ -62830,18 +63161,13 @@ async function _commit({
       if (!tree) {
         tree = await constructTree({ fs, gitdir, inode, dryRun });
       }
+
+      // Determine parents of this commit
       if (!parent) {
-        try {
-          parent = [
-            await GitRefManager.resolve({
-              fs,
-              gitdir,
-              ref,
-            }),
-          ];
-        } catch (err) {
-          // Probably an initial commit
-          parent = [];
+        if (!amend) {
+          parent = refOid ? [refOid] : [];
+        } else {
+          parent = refCommit.commit.parent;
         }
       } else {
         // ensure that the parents are oids, not refs
@@ -62852,6 +63178,16 @@ async function _commit({
         );
       }
 
+      // Determine message of this commit
+      if (!message) {
+        if (!amend) {
+          throw new MissingParameterError('message')
+        } else {
+          message = refCommit.commit.message;
+        }
+      }
+
+      // Create and write new Commit object
       let comm = GitCommit.from({
         tree,
         parent,
@@ -63147,72 +63483,6 @@ async function _addNote({
   });
 
   return commitOid
-}
-
-// @ts-check
-
-/**
- * @param {Object} args
- * @param {import('../models/FileSystem.js').FileSystem} args.fs
- * @param {string} args.gitdir
- * @param {string} args.path
- *
- * @returns {Promise<any>} Resolves with the config value
- *
- * @example
- * // Read config value
- * let value = await git.getConfig({
- *   dir: '$input((/))',
- *   path: '$input((user.name))'
- * })
- * console.log(value)
- *
- */
-async function _getConfig({ fs, gitdir, path }) {
-  const config = await GitConfigManager.get({ fs, gitdir });
-  return config.get(path)
-}
-
-/**
- *
- * @returns {Promise<void | {name: string, email: string, date: Date, timestamp: number, timezoneOffset: number }>}
- */
-async function normalizeAuthorObject({ fs, gitdir, author = {} }) {
-  let { name, email, timestamp, timezoneOffset } = author;
-  name = name || (await _getConfig({ fs, gitdir, path: 'user.name' }));
-  email = email || (await _getConfig({ fs, gitdir, path: 'user.email' })) || '';
-
-  if (name === undefined) {
-    return undefined
-  }
-
-  timestamp = timestamp != null ? timestamp : Math.floor(Date.now() / 1000);
-  timezoneOffset =
-    timezoneOffset != null
-      ? timezoneOffset
-      : new Date(timestamp * 1000).getTimezoneOffset();
-
-  return { name, email, timestamp, timezoneOffset }
-}
-
-/**
- *
- * @returns {Promise<void | {name: string, email: string, timestamp: number, timezoneOffset: number }>}
- */
-async function normalizeCommitterObject({
-  fs,
-  gitdir,
-  author,
-  committer,
-}) {
-  committer = Object.assign({}, committer || author);
-  // Match committer's date to author's one, if omitted
-  if (author) {
-    committer.timestamp = committer.timestamp || author.timestamp;
-    committer.timezoneOffset = committer.timezoneOffset || author.timezoneOffset;
-  }
-  committer = await normalizeAuthorObject({ fs, gitdir, author: committer });
-  return committer
 }
 
 // @ts-check
@@ -63688,6 +63958,7 @@ const worthWalking = (filepath, root) => {
  * @param {import('../models/FileSystem.js').FileSystem} args.fs
  * @param {any} args.cache
  * @param {ProgressCallback} [args.onProgress]
+ * @param {PostCheckoutCallback} [args.onPostCheckout]
  * @param {string} args.dir
  * @param {string} args.gitdir
  * @param {string} args.ref
@@ -63706,6 +63977,7 @@ async function _checkout({
   fs,
   cache,
   onProgress,
+  onPostCheckout,
   dir,
   gitdir,
   remote,
@@ -63717,6 +63989,16 @@ async function _checkout({
   force,
   track = true,
 }) {
+  // oldOid is defined only if onPostCheckout hook is attached
+  let oldOid;
+  if (onPostCheckout) {
+    try {
+      oldOid = await GitRefManager.resolve({ fs, gitdir, ref: 'HEAD' });
+    } catch (err) {
+      oldOid = '0000000000000000000000000000000000000000';
+    }
+  }
+
   // Get tree oid
   let oid;
   try {
@@ -63792,6 +64074,14 @@ async function _checkout({
     if (dryRun) {
       // Since the format of 'ops' is in flux, I really would rather folk besides myself not start relying on it
       // return ops
+
+      if (onPostCheckout) {
+        await onPostCheckout({
+          previousHead: oldOid,
+          newHead: oid,
+          type: filepaths != null && filepaths.length > 0 ? 'file' : 'branch',
+        });
+      }
       return
     }
 
@@ -63936,6 +64226,14 @@ async function _checkout({
           })
       );
     });
+
+    if (onPostCheckout) {
+      await onPostCheckout({
+        previousHead: oldOid,
+        newHead: oid,
+        type: filepaths != null && filepaths.length > 0 ? 'file' : 'branch',
+      });
+    }
   }
 
   // Update HEAD
@@ -64255,6 +64553,7 @@ async function analyze({
  * @param {object} args
  * @param {FsClient} args.fs - a file system implementation
  * @param {ProgressCallback} [args.onProgress] - optional progress event callback
+ * @param {PostCheckoutCallback} [args.onPostCheckout] - optional post-checkout hook callback
  * @param {string} args.dir - The [working tree](dir-vs-gitdir.md) directory path
  * @param {string} [args.gitdir=join(dir,'.git')] - [required] The [git directory](dir-vs-gitdir.md) path
  * @param {string} [args.ref = 'HEAD'] - Source to checkout files from
@@ -64303,6 +64602,7 @@ async function analyze({
 async function checkout({
   fs,
   onProgress,
+  onPostCheckout,
   dir,
   gitdir = join(dir, '.git'),
   remote = 'origin',
@@ -64325,6 +64625,7 @@ async function checkout({
       fs: new FileSystem(fs),
       cache,
       onProgress,
+      onPostCheckout,
       dir,
       gitdir,
       remote,
@@ -65021,8 +65322,8 @@ function filterCapabilities(server, client) {
 
 const pkg = {
   name: 'isomorphic-git',
-  version: '1.25.9',
-  agent: 'git/isomorphic-git@1.25.9',
+  version: '1.27.1',
+  agent: 'git/isomorphic-git@1.27.1',
 };
 
 class FIFO {
@@ -65762,6 +66063,7 @@ async function _init({
  * @param {AuthCallback} [args.onAuth]
  * @param {AuthFailureCallback} [args.onAuthFailure]
  * @param {AuthSuccessCallback} [args.onAuthSuccess]
+ * @param {PostCheckoutCallback} [args.onPostCheckout]
  * @param {string} [args.dir]
  * @param {string} args.gitdir
  * @param {string} args.url
@@ -65789,6 +66091,7 @@ async function _clone({
   onAuth,
   onAuthSuccess,
   onAuthFailure,
+  onPostCheckout,
   dir,
   gitdir,
   url,
@@ -65841,6 +66144,7 @@ async function _clone({
       fs,
       cache,
       onProgress,
+      onPostCheckout,
       dir,
       gitdir,
       ref,
@@ -65871,6 +66175,7 @@ async function _clone({
  * @param {AuthCallback} [args.onAuth] - optional auth fill callback
  * @param {AuthFailureCallback} [args.onAuthFailure] - optional auth rejected callback
  * @param {AuthSuccessCallback} [args.onAuthSuccess] - optional auth approved callback
+ * @param {PostCheckoutCallback} [args.onPostCheckout] - optional post-checkout hook callback
  * @param {string} args.dir - The [working tree](dir-vs-gitdir.md) directory path
  * @param {string} [args.gitdir=join(dir,'.git')] - [required] The [git directory](dir-vs-gitdir.md) path
  * @param {string} args.url - The URL of the remote repository
@@ -65910,6 +66215,7 @@ async function clone({
   onAuth,
   onAuthSuccess,
   onAuthFailure,
+  onPostCheckout,
   dir,
   gitdir = join(dir, '.git'),
   url,
@@ -65944,6 +66250,7 @@ async function clone({
       onAuth,
       onAuthSuccess,
       onAuthFailure,
+      onPostCheckout,
       dir,
       gitdir,
       url,
@@ -65966,7 +66273,6 @@ async function clone({
 }
 
 // @ts-check
-
 /**
  * Create a new commit
  *
@@ -65975,7 +66281,7 @@ async function clone({
  * @param {SignCallback} [args.onSign] - a PGP signing implementation
  * @param {string} [args.dir] - The [working tree](dir-vs-gitdir.md) directory path
  * @param {string} [args.gitdir=join(dir,'.git')] - [required] The [git directory](dir-vs-gitdir.md) path
- * @param {string} args.message - The commit message to use.
+ * @param {string} [args.message] - The commit message to use. Required, unless `amend === true`
  * @param {Object} [args.author] - The details about the author.
  * @param {string} [args.author.name] - Default is `user.name` config.
  * @param {string} [args.author.email] - Default is `user.email` config.
@@ -65987,6 +66293,7 @@ async function clone({
  * @param {number} [args.committer.timestamp=Math.floor(Date.now()/1000)] - Set the committer timestamp field. This is the integer number of seconds since the Unix epoch (1970-01-01 00:00:00).
  * @param {number} [args.committer.timezoneOffset] - Set the committer timezone offset field. This is the difference, in minutes, from the current timezone to UTC. Default is `(new Date()).getTimezoneOffset()`.
  * @param {string} [args.signingKey] - Sign the tag object using this private PGP key.
+ * @param {boolean} [args.amend = false] - If true, replaces the last commit pointed to by `ref` with a new commit.
  * @param {boolean} [args.dryRun = false] - If true, simulates making a commit so you can test whether it would succeed. Implies `noUpdateBranch`.
  * @param {boolean} [args.noUpdateBranch = false] - If true, does not update the branch pointer after creating the commit.
  * @param {string} [args.ref] - The fully expanded name of the branch to commit to. Default is the current branch pointed to by HEAD. (TODO: fix it so it can expand branch names without throwing if the branch doesn't exist yet.)
@@ -66015,9 +66322,10 @@ async function commit({
   dir,
   gitdir = join(dir, '.git'),
   message,
-  author: _author,
-  committer: _committer,
+  author,
+  committer,
   signingKey,
+  amend = false,
   dryRun = false,
   noUpdateBranch = false,
   ref,
@@ -66027,22 +66335,13 @@ async function commit({
 }) {
   try {
     assertParameter('fs', _fs);
-    assertParameter('message', message);
+    if (!amend) {
+      assertParameter('message', message);
+    }
     if (signingKey) {
       assertParameter('onSign', onSign);
     }
     const fs = new FileSystem(_fs);
-
-    const author = await normalizeAuthorObject({ fs, gitdir, author: _author });
-    if (!author) throw new MissingNameError('author')
-
-    const committer = await normalizeCommitterObject({
-      fs,
-      gitdir,
-      author,
-      committer: _committer,
-    });
-    if (!committer) throw new MissingNameError('committer')
 
     return await _commit({
       fs,
@@ -66053,6 +66352,7 @@ async function commit({
       author,
       committer,
       signingKey,
+      amend,
       dryRun,
       noUpdateBranch,
       ref,
@@ -66138,6 +66438,12 @@ async function _deleteBranch({ fs, gitdir, ref }) {
 
   // Delete a specified branch
   await GitRefManager.deleteRef({ fs, gitdir, ref: fullRef });
+
+  // Delete branch config entries
+  const abbrevRef = abbreviateRef(ref);
+  const config = await GitConfigManager.get({ fs, gitdir });
+  await config.deleteSection('branch', abbrevRef);
+  await GitConfigManager.save({ fs, gitdir, config });
 }
 
 // @ts-check
@@ -68772,49 +69078,6 @@ async function listTags({ fs, dir, gitdir = join(dir, '.git') }) {
   }
 }
 
-async function resolveCommit({ fs, cache, gitdir, oid }) {
-  const { type, object } = await _readObject({ fs, cache, gitdir, oid });
-  // Resolve annotated tag objects to whatever
-  if (type === 'tag') {
-    oid = GitAnnotatedTag.from(object).parse().object;
-    return resolveCommit({ fs, cache, gitdir, oid })
-  }
-  if (type !== 'commit') {
-    throw new ObjectTypeError(oid, type, 'commit')
-  }
-  return { commit: GitCommit.from(object), oid }
-}
-
-// @ts-check
-
-/**
- * @param {object} args
- * @param {import('../models/FileSystem.js').FileSystem} args.fs
- * @param {any} args.cache
- * @param {string} args.gitdir
- * @param {string} args.oid
- *
- * @returns {Promise<ReadCommitResult>} Resolves successfully with a git commit object
- * @see ReadCommitResult
- * @see CommitObject
- *
- */
-async function _readCommit({ fs, cache, gitdir, oid }) {
-  const { commit, oid: commitOid } = await resolveCommit({
-    fs,
-    cache,
-    gitdir,
-    oid,
-  });
-  const result = {
-    oid: commitOid,
-    commit: commit.parse(),
-    payload: commit.withoutSignature(),
-  };
-  // @ts-ignore
-  return result
-}
-
 function compareAge(a, b) {
   return a.committer.timestamp - b.committer.timestamp
 }
@@ -69780,6 +70043,7 @@ async function writeReceivePackRequest({
  * @param {AuthCallback} [args.onAuth]
  * @param {AuthFailureCallback} [args.onAuthFailure]
  * @param {AuthSuccessCallback} [args.onAuthSuccess]
+ * @param {PrePushCallback} [args.onPrePush]
  * @param {string} args.gitdir
  * @param {string} [args.ref]
  * @param {string} [args.remoteRef]
@@ -69801,6 +70065,7 @@ async function _push({
   onAuth,
   onAuthSuccess,
   onAuthFailure,
+  onPrePush,
   gitdir,
   ref: _ref,
   remoteRef: _remoteRef,
@@ -69884,6 +70149,16 @@ async function _push({
   const oldoid =
     httpRemote.refs.get(fullRemoteRef) ||
     '0000000000000000000000000000000000000000';
+
+  if (onPrePush) {
+    const hookCancel = await onPrePush({
+      remote,
+      url,
+      localRef: { ref: _delete ? '(delete)' : fullRef, oid: oid },
+      remoteRef: { ref: fullRemoteRef, oid: oldoid },
+    });
+    if (!hookCancel) throw new UserCanceledError()
+  }
 
   // Remotes can always accept thin-packs UNLESS they specify the 'no-thin' capability
   const thinPack = !httpRemote.capabilities.has('no-thin');
@@ -70018,7 +70293,12 @@ async function _push({
   }
 
   // Update the local copy of the remote ref
-  if (remote && result.ok && result.refs[fullRemoteRef].ok) {
+  if (
+    remote &&
+    result.ok &&
+    result.refs[fullRemoteRef].ok &&
+    !fullRef.startsWith('refs/tags')
+  ) {
     // TODO: I think this should actually be using a refspec transform rather than assuming 'refs/remotes/{remote}'
     const ref = `refs/remotes/${remote}/${fullRemoteRef.replace(
       'refs/heads',
@@ -70062,9 +70342,10 @@ async function _push({
  * @param {AuthCallback} [args.onAuth] - optional auth fill callback
  * @param {AuthFailureCallback} [args.onAuthFailure] - optional auth rejected callback
  * @param {AuthSuccessCallback} [args.onAuthSuccess] - optional auth approved callback
+ * @param {PrePushCallback} [args.onPrePush] - optional pre-push hook callback
  * @param {string} [args.dir] - The [working tree](dir-vs-gitdir.md) directory path
  * @param {string} [args.gitdir=join(dir,'.git')] - [required] The [git directory](dir-vs-gitdir.md) path
- * @param {string} [args.ref] - Which branch to push. By default this is the currently checked out branch.
+ * @param {string} [args.ref] - Which branch or tag to push. By default this is the currently checked out branch.
  * @param {string} [args.url] - The URL of the remote repository. The default is the value set in the git config for that remote.
  * @param {string} [args.remote] - If URL is not specified, determines which remote to use.
  * @param {string} [args.remoteRef] - The name of the receiving branch on the remote. By default this is the configured remote tracking branch.
@@ -70098,6 +70379,7 @@ async function push({
   onAuth,
   onAuthSuccess,
   onAuthFailure,
+  onPrePush,
   dir,
   gitdir = join(dir, '.git'),
   ref,
@@ -70124,6 +70406,7 @@ async function push({
       onAuth,
       onAuthSuccess,
       onAuthFailure,
+      onPrePush,
       gitdir,
       ref,
       remoteRef,
