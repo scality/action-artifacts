@@ -5,15 +5,58 @@ import * as process from 'process'
 import {
   artifactsRetry,
   artifactsIndexRequestRetry,
+  exponentialDelay,
   getCommitSha1,
   workflowRunResponseDataType,
   workflowRunResponseType
 } from './utils'
-import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios'
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse
+} from 'axios'
 import {GitHub} from '@actions/github/lib/utils'
 import {InputsArtifacts} from './inputs-helper'
 import fs from 'fs'
 import https from 'https'
+
+const MAX_UPLOAD_RETRIES = 10
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  retries: number,
+  label: string
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (attempt >= retries) throw err
+      // 4xx errors are permanent (bad credentials, missing resource) — don't retry.
+      if (
+        err instanceof AxiosError &&
+        err.response &&
+        err.response.status < 500
+      )
+        throw err
+      const delay = exponentialDelay(attempt)
+      core.warning(
+        `${label}: attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms: ${err}`
+      )
+      await new Promise<void>(resolve => setTimeout(resolve, delay))
+    }
+  }
+}
+
+// Files larger than this threshold use multipart upload instead of a single PUT.
+export const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100 MB
+// Each part is 64 MB. Smaller parts reduce the risk of a single stalled TCP
+// stream blocking progress, and give more granular retry surface.
+const MULTIPART_PART_SIZE = 64 * 1024 * 1024 // 64 MB
+// Number of parts uploaded concurrently per file.
+// 4 concurrent parts × 8 concurrent files = 32 peak S3 connections.
+const MULTIPART_CONCURRENCY = 4
 
 export async function workflowName(
   workflow?: string | undefined
@@ -79,6 +122,317 @@ export async function fileUpload(
   artifactsRetry(client, retries)
 
   return client.put(url, fileStream, request_config)
+}
+
+// Upload a file directly to S3 using a presigned PUT URL obtained from nginx.
+// The data goes runner → S3 without transiting through the nginx proxy.
+export async function fileUploadPresigned(
+  client: AxiosInstance,
+  baseUrl: string,
+  buildName: string,
+  file: string,
+  filePath: string
+): Promise<void> {
+  const presignUrl = new URL(
+    path.join('/presign-upload/', buildName, filePath),
+    baseUrl
+  ).toString()
+
+  // Re-fetch the presign URL on each attempt — presigned URLs are time-limited.
+  await retryWithBackoff(
+    async () => {
+      const presignResp = await client.get(presignUrl, {timeout: 30000})
+      const s3PutUrl = (presignResp.data as string).trim()
+      core.info(
+        `Presigned upload: sending ${file} directly to S3 (bypassing proxy)`
+      )
+
+      const body_size = fs.statSync(file).size
+      const fileStream = fs.createReadStream(file)
+      // Use raw https.request instead of axios.put to preserve the presigned URL
+      // query string exactly. Axios parses URLs via the URL API which decodes
+      // %2B → + and re-encodes it as + (space in query strings), corrupting the
+      // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
+      const s3Url = new URL(s3PutUrl)
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const req = https.request(
+            {
+              method: 'PUT',
+              hostname: s3Url.hostname,
+              port: s3Url.port ? parseInt(s3Url.port) : 443,
+              path: s3Url.pathname + s3Url.search,
+              headers: {'Content-Length': String(body_size)},
+              timeout: 300000
+            },
+            res => {
+              let body = ''
+              res.on('data', (chunk: Buffer) => {
+                body += chunk.toString()
+              })
+              res.on('end', () => {
+                if (res.statusCode === 200) {
+                  resolve()
+                } else {
+                  core.error(
+                    `Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`
+                  )
+                  reject(
+                    new Error(
+                      `Presigned upload: ${file} failed with status ${res.statusCode}: ${body}`
+                    )
+                  )
+                }
+              })
+            }
+          )
+          req.on('timeout', () =>
+            req.destroy(
+              new Error(`Presigned upload: S3 PUT timed out for ${file}`)
+            )
+          )
+          req.on('error', reject)
+          fileStream.pipe(req)
+        })
+      } finally {
+        fileStream.destroy()
+      }
+    },
+    MAX_UPLOAD_RETRIES,
+    `Presigned upload of ${path.basename(file)}`
+  )
+}
+
+export type ServerCapabilities = {
+  presigned: boolean
+  multipart: boolean
+}
+
+// Probe the server once to detect which upload routes are available.
+// Old nginx deployments (e.g. GCP) return 404 for unknown routes; new ones
+// return any other status (200, 400, 401, …) even on invalid probe parameters.
+// Both probes run in parallel to minimise latency.
+export async function probeServerCapabilities(
+  client: AxiosInstance,
+  baseUrl: string
+): Promise<ServerCapabilities> {
+  const probe = async (url: string, params?: object): Promise<boolean> => {
+    try {
+      const resp = await client.get(url, {
+        params,
+        validateStatus: () => true,
+        timeout: 10000
+      })
+      return resp.status !== 404
+    } catch {
+      return false
+    }
+  }
+
+  const [presigned, multipart] = await Promise.all([
+    probe(
+      new URL('/presign-upload/capability-probe/probe.bin', baseUrl).toString()
+    ),
+    probe(
+      new URL(
+        '/presign-upload-part/capability-probe/probe.bin',
+        baseUrl
+      ).toString(),
+      {
+        partNumber: 1,
+        uploadId: 'probe'
+      }
+    )
+  ])
+
+  return {presigned, multipart}
+}
+
+export async function fileUploadMultipart(
+  client: AxiosInstance,
+  baseUrl: string,
+  buildName: string,
+  file: string,
+  filePath: string
+): Promise<void> {
+  const fileSize = fs.statSync(file).size
+
+  // 1. Initiate multipart upload → get uploadId from S3 XML response.
+  const partCount = Math.ceil(fileSize / MULTIPART_PART_SIZE)
+  core.info(`Multipart: initiating upload (${partCount} parts) for ${file}`)
+  const initiateUrl = new URL(
+    path.join('/upload-multipart/initiate/', buildName, filePath),
+    baseUrl
+  ).toString()
+  const initiateResp = await retryWithBackoff(
+    async () =>
+      client.post(initiateUrl, null, {
+        headers: {'Content-Length': '0'},
+        timeout: 60000
+      }),
+    MAX_UPLOAD_RETRIES,
+    `Multipart: initiate of ${path.basename(file)}`
+  )
+  const uploadId = (initiateResp.data as string).match(
+    /<UploadId>([^<]+)<\/UploadId>/
+  )?.[1]
+  if (!uploadId) {
+    throw new Error(
+      `Multipart initiate failed for ${file}: could not extract uploadId`
+    )
+  }
+  core.info(`Multipart: initiated, uploadId obtained for ${file}`)
+
+  // 2. Upload all parts in parallel (MULTIPART_CONCURRENCY at a time).
+  // Each part: GET a presigned S3 URL from the proxy (auth + tiny payload),
+  // then PUT the part body directly to S3 — data bypasses the nginx proxy
+  // and the node NIC entirely.
+  const etags: {partNumber: number; etag: string}[] = []
+  const presignPartBaseUrl = new URL(
+    path.join('/presign-upload-part/', buildName, filePath),
+    baseUrl
+  ).toString()
+
+  const uploadPart = async (partNumber: number): Promise<void> => {
+    const start = (partNumber - 1) * MULTIPART_PART_SIZE
+    const end = Math.min(start + MULTIPART_PART_SIZE, fileSize) - 1
+    const partSize = end - start + 1
+    core.info(
+      `Multipart: uploading part ${partNumber}/${partCount} (${Math.round(partSize / 1e6)}MB) for ${file}`
+    )
+
+    // Step 2a — get presigned URL (authenticated, lightweight).
+    const presignResp = await client.get(presignPartBaseUrl, {
+      params: {partNumber, uploadId},
+      timeout: 30000
+    })
+    const s3PartUrl = (presignResp.data as string).trim()
+    core.info(
+      `Multipart: part ${partNumber}/${partCount} uploading directly to S3 (bypassing proxy): ${new URL(s3PartUrl).hostname}`
+    )
+
+    // Step 2b — PUT part directly to S3 using raw https.request.
+    // Axios re-encodes presigned URL query strings via the URL API, which
+    // decodes %2B → + and re-serialises it as + (space in query strings).
+    // This corrupts the AWS Signature V2 and causes 403 at Scaleway.
+    // Using https.request preserves the query string exactly as returned
+    // by the proxy.
+    const partStream = fs.createReadStream(file, {start, end})
+    const s3Url = new URL(s3PartUrl)
+    let etag: string
+    try {
+      etag = await new Promise<string>((resolve, reject) => {
+        const req = https.request(
+          {
+            method: 'PUT',
+            hostname: s3Url.hostname,
+            port: s3Url.port ? parseInt(s3Url.port) : 443,
+            path: s3Url.pathname + s3Url.search,
+            headers: {'Content-Length': String(partSize)},
+            timeout: 300000
+          },
+          res => {
+            let body = ''
+            res.on('data', (chunk: Buffer) => {
+              body += chunk.toString()
+            })
+            res.on('end', () => {
+              if (res.statusCode === 200) {
+                const tag = res.headers['etag'] as string
+                if (!tag) {
+                  reject(
+                    new Error(
+                      `No ETag returned for part ${partNumber} of ${file}`
+                    )
+                  )
+                } else {
+                  resolve(tag)
+                }
+              } else {
+                reject(
+                  new Error(
+                    `Multipart: part ${partNumber}/${partCount} failed with status ${res.statusCode}: ${body}`
+                  )
+                )
+              }
+            })
+          }
+        )
+        req.on('timeout', () =>
+          req.destroy(
+            new Error(
+              `Multipart: S3 PUT timed out for part ${partNumber}/${partCount} of ${file}`
+            )
+          )
+        )
+        req.on('error', reject)
+        partStream.pipe(req)
+      })
+    } finally {
+      partStream.destroy()
+    }
+    etags.push({partNumber, etag})
+    core.info(`Multipart: part ${partNumber}/${partCount} done for ${file}`)
+  }
+
+  try {
+    const queue = Array.from({length: partCount}, (_, i) => i + 1)
+    const worker = async (): Promise<void> => {
+      while (queue.length > 0) {
+        const partNumber = queue.shift()
+        if (partNumber === undefined) break
+        // Re-fetch presign URL on each attempt — presigned URLs are time-limited.
+        await retryWithBackoff(
+          async () => uploadPart(partNumber),
+          MAX_UPLOAD_RETRIES,
+          `Multipart: part ${partNumber}/${partCount} of ${path.basename(file)}`
+        )
+      }
+    }
+    await Promise.all(
+      Array.from({length: Math.min(MULTIPART_CONCURRENCY, partCount)}, worker)
+    )
+
+    // 3. Complete the multipart upload with sorted part list.
+    // Kept inside try so a complete failure triggers the abort below,
+    // preventing orphaned parts from accumulating on S3.
+    core.info(`Multipart: completing upload for ${file}`)
+    const xml = `<CompleteMultipartUpload>${etags
+      .sort((a, b) => a.partNumber - b.partNumber)
+      .map(
+        p =>
+          `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`
+      )
+      .join('')}</CompleteMultipartUpload>`
+
+    const completeUrl = new URL(
+      path.join('/upload-multipart/complete/', buildName, filePath),
+      baseUrl
+    ).toString()
+    await retryWithBackoff(
+      async () =>
+        client.post(completeUrl, xml, {
+          params: {uploadId},
+          headers: {'Content-Type': 'application/xml'},
+          timeout: 120000
+        }),
+      MAX_UPLOAD_RETRIES,
+      `Multipart: complete of ${path.basename(file)}`
+    )
+  } catch (e) {
+    // Abort the multipart upload so S3 does not keep orphaned parts.
+    // This covers both part-upload failures and complete failures.
+    const abortUrl = new URL(
+      path.join('/upload-multipart/abort/', buildName, filePath),
+      baseUrl
+    ).toString()
+    try {
+      await client.delete(abortUrl, {params: {uploadId}, timeout: 60000})
+    } catch (err) {
+      core.warning(`Multipart abort failed: ${err}`)
+    }
+    throw e
+  }
 }
 
 export async function fileVersion(

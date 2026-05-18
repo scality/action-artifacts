@@ -67,11 +67,33 @@ jobs:
       - name: Compare files
         run: cmp --silent upload_big_file.txt ./big_file.txt
 
+  test-upload-multipart:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    name: Upload a file above the 100 MB multipart threshold and verify integrity
+    steps:
+      - uses: actions/checkout@v6
+      - name: Create a 110 MB file (above 100 MB multipart threshold)
+        run: dd if=/dev/urandom of=multipart_file.bin count=110 bs=1M
+      - name: Upload via action (triggers multipart path)
+        id: artifacts-upload
+        uses: ./
+        with:
+          url: ${{ vars.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: ./multipart_file.bin
+          method: upload
+      - name: Download file
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/multipart_file.bin > downloaded_file.bin
+      - name: Compare files byte-for-byte
+        run: cmp --silent multipart_file.bin downloaded_file.bin
+
   push-artifacts-action:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     name: A job that push single files on artifacts
-    needs: [test-upload-big-file, test-upload-multiple-files]
+    needs: [test-upload-big-file, test-upload-multiple-files, test-upload-multipart]
     steps:
       - uses: actions/checkout@v6
       - id: artifacts-upload
