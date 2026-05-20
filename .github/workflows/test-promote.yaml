@@ -21,7 +21,7 @@ jobs:
         ports:
         - 8080:8000
       artifacts:
-        image: "ghcr.io/scality/artifacts:4.3.3"
+        image: "ghcr.io/scality/artifacts:4.4.2"
         ports:
           - 8000:80
         env:
@@ -30,9 +30,7 @@ jobs:
           AWS_BUCKET_PREFIX: artifacts
           ENDPOINT_URL: http://cloudserver-front:8000
           AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
-          GITHUB_API_COMPANY: scality
-          GITHUB_API_ENABLED: true
-          GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
+          GITHUB_API_ENABLED: false
     steps:
       - name: Waiting for cloudserver to boot
         run: |
@@ -81,7 +79,7 @@ jobs:
           echo ${{ steps.artifacts-promote.outputs.link }}
       - name: Get promoted artifacts
         run: |
-          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-promote.outputs.link }}/.final_status
+          curl -L -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-promote.outputs.link }}/.final_status
 
       - name: Tag the repo
         run: git tag 1.0.1
