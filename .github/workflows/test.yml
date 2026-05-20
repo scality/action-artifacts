@@ -22,7 +22,7 @@ jobs:
         ports:
         - 8000:8000
       artifacts:
-        image: "ghcr.io/scality/artifacts:4.3.3"
+        image: "ghcr.io/scality/artifacts:4.4.2"
         ports:
           - 8080:80
         env:
@@ -59,7 +59,7 @@ jobs:
           AWS_ACCESS_KEY_ID: accessKey1
       - name: curl artifacts
         run: |
-          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} http://localhost:8080/builds/
+          curl -L -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} http://localhost:8080/builds/
       - run: |
           yarn install
       - run: |
