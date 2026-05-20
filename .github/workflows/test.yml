@@ -22,7 +22,7 @@ jobs:
         ports:
         - 8000:8000
       artifacts:
-        image: "ghcr.io/scality/artifacts:4.3.3"
+        image: "ghcr.io/scality/artifacts:4.4.2"
         ports:
           - 8080:80
         env:
@@ -31,9 +31,7 @@ jobs:
           AWS_BUCKET_PREFIX: artifacts
           ENDPOINT_URL: http://cloudserver-front:8000
           AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
-          GITHUB_API_COMPANY: scality
-          GITHUB_API_ENABLED: true
-          GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
+          GITHUB_API_ENABLED: false
     steps:
       - uses: actions/checkout@v6
       - name: Set Node.js
@@ -59,7 +57,7 @@ jobs:
           AWS_ACCESS_KEY_ID: accessKey1
       - name: curl artifacts
         run: |
-          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} http://localhost:8080/builds/
+          curl -L -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} http://localhost:8080/builds/
       - run: |
           yarn install
       - run: |

@@ -1,10 +1,8 @@
 ---
 on:
   push:
-    tags:
-    - '**'
     tags-ignore:
-    - 'v**'
+      - 'v**'
 
 name: promote release
 

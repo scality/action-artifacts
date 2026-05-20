@@ -9,7 +9,7 @@ jobs:
   test-promote:
     runs-on: ubuntu-latest
     env:
-      ARTIFACTS_URL: http://localhost:8000
+      ARTIFACTS_URL: http://localhost:8080
     services:
       cloudserver-front:
         image: "zenko/cloudserver:8.1.2"
@@ -19,21 +19,21 @@ jobs:
           ENDPOINT: "cloudserver-front"
           CI: false
         ports:
-        - 8080:8000
+        - 8000:8000
       artifacts:
-        image: "ghcr.io/scality/artifacts:4.3.3"
+        image: "ghcr.io/scality/artifacts:4.4.2"
         ports:
-          - 8000:80
+          - 8080:80
         env:
           AWS_SECRET_ACCESS_KEY: verySecretKey1
           AWS_ACCESS_KEY_ID: accessKey1
           AWS_BUCKET_PREFIX: artifacts
           ENDPOINT_URL: http://cloudserver-front:8000
           AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
-          GITHUB_API_COMPANY: scality
-          GITHUB_API_ENABLED: true
-          GITHUB_USER_ALLOWED_UPLOAD: ${{ secrets.ARTIFACTS_USER }}
+          GITHUB_API_ENABLED: false
     steps:
+      - name: Add cloudserver-front to /etc/hosts
+        run: echo "127.0.0.1 cloudserver-front" | sudo tee -a /etc/hosts
       - name: Waiting for cloudserver to boot
         run: |
           ret=0
@@ -51,7 +51,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: verySecretKey1
           AWS_ACCESS_KEY_ID: accessKey1
           AWS_BUCKET_PREFIX: artifacts
-          ENDPOINT_URL: http://localhost:8080
+          ENDPOINT_URL: http://localhost:8000
       - uses: actions/checkout@v6
       - run: echo SUCCESS > .final_status
       - name: Artifacts Upload
@@ -81,7 +81,7 @@ jobs:
           echo ${{ steps.artifacts-promote.outputs.link }}
       - name: Get promoted artifacts
         run: |
-          curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-promote.outputs.link }}/.final_status
+          curl -L -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} ${{ steps.artifacts-promote.outputs.link }}/.final_status
 
       - name: Tag the repo
         run: git tag 1.0.1
