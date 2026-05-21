@@ -1,6 +1,9 @@
 
+# Concurrency only applies to push-triggered runs on development branches.
+# workflow_dispatch runs get a unique group (run_id) so multiple manual
+# triggers can execute in parallel — which is the whole point of load testing.
 concurrency:
-  group: 'load-tests-${{ github.ref }}'
+  group: ${{ github.event_name == 'workflow_dispatch' && format('load-tests-dispatch-{0}', github.run_id) || format('load-tests-{0}', github.ref) }}
   cancel-in-progress: false
 
 on:
@@ -21,16 +24,21 @@ jobs:
       fail-fast: false
       matrix:
         test:
-        - host: ubuntu-latest
-          name: github-hosted
-        - host: ubuntu-latest
-          name: github-hosted-container
-          container: ubuntu
-        - host: [self-hosted, focal, large]
-          name: self-hosted
+        # 10 github-hosted workers to generate concurrent upload load
+        - {host: ubuntu-latest, name: github-hosted-1}
+        - {host: ubuntu-latest, name: github-hosted-2}
+        - {host: ubuntu-latest, name: github-hosted-3}
+        - {host: ubuntu-latest, name: github-hosted-4}
+        - {host: ubuntu-latest, name: github-hosted-5}
+        - {host: ubuntu-latest, name: github-hosted-6}
+        - {host: ubuntu-latest, name: github-hosted-7}
+        - {host: ubuntu-latest, name: github-hosted-8}
+        - {host: ubuntu-latest, name: github-hosted-9}
+        - {host: ubuntu-latest, name: github-hosted-10}
+        # keep one self-hosted for comparison
+        - {host: [self-hosted, focal, large], name: self-hosted}
     runs-on: ${{ matrix.test.host }}
     environment: ${{ inputs.environment || 'production' }}
-    container: ${{ matrix.test.container }}
     name: load tests on ${{ matrix.test.name }}
     steps:
       - uses: actions/checkout@v6
