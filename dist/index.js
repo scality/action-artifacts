@@ -969,16 +969,24 @@ function upload(inputs) {
             core.warning(`No files found for the provided path: ${inputs.source}`);
             return;
         }
-        const capabilities = yield (0, artifacts_1.probeServerCapabilities)(client, inputs.url);
-        core.info(`Server capabilities — presigned: ${capabilities.presigned}, multipart: ${capabilities.multipart}`);
+        // Only probe server capabilities when at least one file is large enough to
+        // benefit from multipart or presigned upload. This avoids unexpected HTTP
+        // requests in environments where the probe endpoints are not yet available
+        // (e.g. older server deployments), and keeps backward-compatible behaviour
+        // for small-file uploads that previously always used the basic upload path.
+        const hasLargeFile = requests.some(f => fs_1.default.statSync(f).size >= artifacts_1.MULTIPART_THRESHOLD);
+        const capabilities = hasLargeFile
+            ? yield (0, artifacts_1.probeServerCapabilities)(client, inputs.url)
+            : { presigned: false, multipart: false };
+        if (hasLargeFile) {
+            core.info(`Server capabilities — presigned: ${capabilities.presigned}, multipart: ${capabilities.multipart}`);
+        }
         // Use higher file concurrency when no file will trigger multipart upload.
         // Multipart files consume MULTIPART_CONCURRENCY=4 S3 connections each, so
         // we cap at 8 files (8×4=32 peak connections). For presigned single-PUT
         // uploads each file uses 1 connection, so we can restore the original 16.
-        const hasLargeFile = capabilities.multipart &&
-            requests.some(f => fs_1.default.statSync(f).size >= artifacts_1.MULTIPART_THRESHOLD);
-        const fileConcurrency = hasLargeFile ? 8 : 16;
-        core.info(`File concurrency: ${fileConcurrency} (${hasLargeFile ? 'multipart files detected' : 'no multipart files'})`);
+        const fileConcurrency = hasLargeFile && capabilities.multipart ? 8 : 16;
+        core.info(`File concurrency: ${fileConcurrency} (${hasLargeFile && capabilities.multipart ? 'multipart files detected' : 'no multipart files'})`);
         core.startGroup(`Uploading ${requests.length} files`);
         try {
             yield async_1.default.eachLimit(requests, fileConcurrency, (file, next) => __awaiter(this, void 0, void 0, function* () {
