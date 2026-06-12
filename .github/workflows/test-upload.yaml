@@ -16,14 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: create multiple files
-        run: mkdir -p test-files && for i in {1..2000}; do dd if=/dev/random of=test-files/$i.txt count=1 bs=1M; done
+        run: mkdir -p test-files-host && for i in {1..2000}; do dd if=/dev/random of=test-files-host/$i.txt count=1 bs=1M; done
       - name: Push all files
         uses: ./
         with:
           url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
-          source: ./test-files
+          source: ./test-files-host
           method: upload
 
   test-upload-multiple-files-container:
@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: create multiple files
-        run: mkdir -p test-files && for i in {1..2000}; do dd if=/dev/random of=test-files/$i.txt count=1 bs=1M; done
+        run: mkdir -p test-files-container && for i in {1..2000}; do dd if=/dev/random of=test-files-container/$i.txt count=1 bs=1M; done
         shell: bash
       - name: Push all files
         uses: ./
@@ -42,7 +42,7 @@ jobs:
           url: ${{ vars.ARTIFACTS_URL }}
           user: ${{ secrets.ARTIFACTS_USER }}
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
-          source: ./test-files
+          source: ./test-files-container
           method: upload
 
   test-upload-big-file:
