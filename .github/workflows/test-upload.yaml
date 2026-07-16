@@ -63,7 +63,7 @@ jobs:
           source: ./big_file.txt
           method: upload
       - name: Download file
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/big_file.txt > upload_big_file.txt
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/big_file.txt > upload_big_file.txt
       - name: Compare files
         run: cmp --silent upload_big_file.txt ./big_file.txt
 
@@ -85,7 +85,7 @@ jobs:
           source: ./multipart_file.bin
           method: upload
       - name: Download file
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/multipart_file.bin > downloaded_file.bin
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/multipart_file.bin > downloaded_file.bin
       - name: Compare files byte-for-byte
         run: cmp --silent multipart_file.bin downloaded_file.bin
 
@@ -112,15 +112,15 @@ jobs:
           password: ${{ secrets.ARTIFACTS_PASSWORD }}
           source: README.md
       - name: Download file
-        run: curl -u  ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error  --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/README.md > upload_README.md
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/README.md > upload_README.md
       - name: Compare files
         run: cmp --silent upload_README.md ./README.md
       - name: Download file with artifacts-link
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.link }}/action.yaml > upload_action.yaml
       - name: Download file with redirect-link
         run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L  --silent --fail --show-error --max-time 3600 ${{ steps.artifacts-upload.outputs.redirect-link }}/action.yaml > redirect-link.yaml
       - name: Download with  artifacts-url and artifacts-name
-        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
+        run: curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }} -L --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/builds/${{ steps.artifacts-upload.outputs.name }}/action.yaml > name_action.yaml
       - run: NUMBER_OF_FILES=$(curl -u ${{ secrets.ARTIFACTS_USER }}:${{ secrets.ARTIFACTS_PASSWORD }}  --silent --fail --show-error --max-time 3600 ${{ vars.ARTIFACTS_URL }}/download/${{ steps.artifacts-upload.outputs.name }}/?format=text)
       - name: Verify number of files
         run: $([[ $NUMBER_OF_FILES -le 103 ]])
