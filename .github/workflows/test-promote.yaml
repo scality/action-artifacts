@@ -99,3 +99,89 @@ jobs:
         run: |
           echo ${{ steps.artifacts-promote-2.outputs.name }}
           echo ${{ steps.artifacts-promote-2.outputs.link }}
+
+  test-promote-large-file:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACTS_URL: http://localhost:8080
+    services:
+      cloudserver-front:
+        image: "zenko/cloudserver:8.1.2"
+        env:
+          REMOTE_MANAGEMENT_DISABLE: 1
+          LOG_LEVEL: debug
+          ENDPOINT: "cloudserver-front"
+          CI: false
+        ports:
+        - 8000:8000
+      artifacts:
+        image: "ghcr.io/scality/artifacts:4.4.2"
+        ports:
+          - 8080:80
+        env:
+          AWS_SECRET_ACCESS_KEY: verySecretKey1
+          AWS_ACCESS_KEY_ID: accessKey1
+          AWS_BUCKET_PREFIX: artifacts
+          ENDPOINT_URL: http://cloudserver-front:8000
+          AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
+          GITHUB_API_ENABLED: false
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
+          df -h
+      - name: Add cloudserver-front to /etc/hosts
+        run: echo "127.0.0.1 cloudserver-front" | sudo tee -a /etc/hosts
+      - name: Waiting for cloudserver to boot
+        run: |
+          ret=0
+          while [[ $ret != "200" ]]; do
+            echo Waiting for cloudserver
+            ret=$(docker exec ${{ job.services.cloudserver-front.id }} curl -s -o /dev/null -L -w ''%{http_code}'' http://localhost:8000/_/healthcheck/deep)
+            sleep 5
+          done
+      - name: Creating buckets
+        run: |
+          aws s3 mb s3://${AWS_BUCKET_PREFIX}-staging --endpoint-url ${ENDPOINT_URL} --region us-east-1
+          aws s3 mb s3://${AWS_BUCKET_PREFIX}-prolonged --endpoint-url ${ENDPOINT_URL} --region us-east-1
+          aws s3 mb s3://${AWS_BUCKET_PREFIX}-promoted --endpoint-url ${ENDPOINT_URL} --region us-east-1
+        env:
+          AWS_SECRET_ACCESS_KEY: verySecretKey1
+          AWS_ACCESS_KEY_ID: accessKey1
+          AWS_BUCKET_PREFIX: artifacts
+          ENDPOINT_URL: http://localhost:8000
+      - uses: actions/checkout@v6
+      - name: Create large file (>5GB) and final_status
+        run: |
+          truncate -s 6G large_file.bin
+          echo SUCCESS > .final_status
+      - name: Artifacts Upload with large file
+        id: artifacts-upload-large
+        uses: ./
+        with:
+          url: ${{ env.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          source: .
+          method: upload
+      - name: Tag the repo
+        run: git tag 1.0.0
+      - name: Artifacts Promote large build
+        id: artifacts-promote-large
+        continue-on-error: true
+        uses: ./
+        with:
+          url: ${{ env.ARTIFACTS_URL }}
+          user: ${{ secrets.ARTIFACTS_USER }}
+          password: ${{ secrets.ARTIFACTS_PASSWORD }}
+          name: ${{ steps.artifacts-upload-large.outputs.name }}
+          tag: '1.0.0'
+          method: promote
+      - name: Assert promote succeeded with large file
+        run: |
+          if [ "${{ steps.artifacts-promote-large.outcome }}" != "success" ]; then
+            echo "FAIL: promote failed for a build containing a file larger than 5GB"
+            echo "This is a known limitation of the S3 CopyObject API (5GB max)."
+            echo "The copy endpoint needs to implement multipart copy (UploadPartCopy) for large files."
+            exit 1
+          fi
