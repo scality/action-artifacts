@@ -125,6 +125,7 @@ jobs:
           ENDPOINT_URL: http://cloudserver-front:8000
           AWS_XML_NS: http://s3.amazonaws.com/doc/2006-03-01/
           GITHUB_API_ENABLED: false
+          COPY_OBJECT_SIZE_LIMIT: "0"
     steps:
       - name: Free disk space
         run: |
