@@ -152,6 +152,12 @@ jobs:
           AWS_BUCKET_PREFIX: artifacts
           ENDPOINT_URL: http://localhost:8000
       - uses: actions/checkout@v6
+      - name: Verify COPY_OBJECT_SIZE_LIMIT in artifacts container
+        run: |
+          echo "=== env in container ==="
+          docker exec ${{ job.services.artifacts.id }} env | grep COPY_OBJECT_SIZE_LIMIT || echo "NOT FOUND in env"
+          echo "=== nginx.conf ==="
+          docker exec ${{ job.services.artifacts.id }} grep COPY_OBJECT_SIZE_LIMIT /etc/nginx/nginx.conf || echo "NOT FOUND in nginx.conf"
       - name: Create large file (>5GB) and final_status
         run: |
           truncate -s 6G large_file.bin
