@@ -825,7 +825,7 @@ function logCopyOutput(data) {
         core.info('All files copied via standard CopyObject (no file >5 GB)');
     }
     for (const line of lines) {
-        core.debug(line);
+        core.info(line);
     }
 }
 function promote(inputs) {
