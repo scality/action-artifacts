@@ -22,7 +22,7 @@ jobs:
         ports:
         - 8000:8000
       artifacts:
-        image: "ghcr.io/scality/artifacts:4.4.2"
+        image: "ghcr.io/scality/artifacts:4.4.7-bugfix"
         ports:
           - 8080:80
         env:
