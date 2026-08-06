@@ -30,6 +30,24 @@ export async function setup(inputs: InputsArtifacts): Promise<void> {
   await setOutputs(name, inputs.url)
 }
 
+function logCopyOutput(data: string): void {
+  const lines = data.split('\n').filter(l => l.trim())
+  const multipartLines = lines.filter(l => l.includes('multipart copy'))
+  if (multipartLines.length > 0) {
+    core.info(
+      `${multipartLines.length} file(s) required multipart copy (file >5 GB):`
+    )
+    for (const line of multipartLines) {
+      core.info(`  ${line}`)
+    }
+  } else {
+    core.info('All files copied via standard CopyObject (no file >5 GB)')
+  }
+  for (const line of lines) {
+    core.debug(line)
+  }
+}
+
 export async function promote(inputs: InputsArtifacts): Promise<void> {
   const staging_regex = new RegExp(
     '(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$'
@@ -82,6 +100,7 @@ export async function promote(inputs: InputsArtifacts): Promise<void> {
   if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
     throw Error(`Build not copied, ${response.status}: ${response.data}`)
   }
+  logCopyOutput(response.data)
   core.info(`'${inputs.name}' has been copied to '${promoted_name}'`)
 
   await setOutputs(promoted_name, inputs.url)
@@ -115,6 +134,7 @@ export async function prolong(inputs: InputsArtifacts): Promise<void> {
   if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
     throw Error(`Build not copied, ${response.status}: ${response.data}`)
   }
+  logCopyOutput(response.data)
   core.info(`'${inputs.name}' has been copied to '${artifacts_target}'`)
 
   await setOutputs(artifacts_target, inputs.url)

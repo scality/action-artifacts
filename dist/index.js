@@ -812,6 +812,22 @@ function setup(inputs) {
         yield (0, artifacts_1.setOutputs)(name, inputs.url);
     });
 }
+function logCopyOutput(data) {
+    const lines = data.split('\n').filter(l => l.trim());
+    const multipartLines = lines.filter(l => l.includes('multipart copy'));
+    if (multipartLines.length > 0) {
+        core.info(`${multipartLines.length} file(s) required multipart copy (file >5 GB):`);
+        for (const line of multipartLines) {
+            core.info(`  ${line}`);
+        }
+    }
+    else {
+        core.info('All files copied via standard CopyObject (no file >5 GB)');
+    }
+    for (const line of lines) {
+        core.debug(line);
+    }
+}
 function promote(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const staging_regex = new RegExp('(^[^/]+:)(staging|prolonged)-([0-9a-f]+).[^./]+.[0-9]+$');
@@ -854,6 +870,7 @@ function promote(inputs) {
         if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
             throw Error(`Build not copied, ${response.status}: ${response.data}`);
         }
+        logCopyOutput(response.data);
         core.info(`'${inputs.name}' has been copied to '${promoted_name}'`);
         yield (0, artifacts_1.setOutputs)(promoted_name, inputs.url);
         yield (0, artifacts_1.setNotice)(promoted_name, inputs.url);
@@ -883,6 +900,7 @@ function prolong(inputs) {
         if (response.status !== 200 || !response.data.includes('BUILD COPIED')) {
             throw Error(`Build not copied, ${response.status}: ${response.data}`);
         }
+        logCopyOutput(response.data);
         core.info(`'${inputs.name}' has been copied to '${artifacts_target}'`);
         yield (0, artifacts_1.setOutputs)(artifacts_target, inputs.url);
         yield (0, artifacts_1.setNotice)(artifacts_target, inputs.url);
