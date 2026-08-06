@@ -19,6 +19,7 @@ import axios, {
 import {GitHub} from '@actions/github/lib/utils'
 import {InputsArtifacts} from './inputs-helper'
 import fs from 'fs'
+import http from 'http'
 import https from 'https'
 
 const MAX_UPLOAD_RETRIES = 10
@@ -154,13 +155,14 @@ export async function fileUploadPresigned(
       // %2B → + and re-encodes it as + (space in query strings), corrupting the
       // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
       const s3Url = new URL(s3PutUrl)
+      const s3Request = s3Url.protocol === 'https:' ? https : http
       try {
         await new Promise<void>((resolve, reject) => {
-          const req = https.request(
+          const req = s3Request.request(
             {
               method: 'PUT',
               hostname: s3Url.hostname,
-              port: s3Url.port ? parseInt(s3Url.port) : 443,
+              port: s3Url.port ? parseInt(s3Url.port) : (s3Url.protocol === 'https:' ? 443 : 80),
               path: s3Url.pathname + s3Url.search,
               headers: {'Content-Length': String(body_size)},
               timeout: 300000
@@ -214,7 +216,8 @@ export type ServerCapabilities = {
 // Both probes run in parallel to minimise latency.
 export async function probeServerCapabilities(
   client: AxiosInstance,
-  baseUrl: string
+  baseUrl: string,
+  probeMultipart = true
 ): Promise<ServerCapabilities> {
   const probe = async (url: string, params?: object): Promise<boolean> => {
     try {
@@ -233,16 +236,18 @@ export async function probeServerCapabilities(
     probe(
       new URL('/presign-upload/capability-probe/probe.bin', baseUrl).toString()
     ),
-    probe(
-      new URL(
-        '/presign-upload-part/capability-probe/probe.bin',
-        baseUrl
-      ).toString(),
-      {
-        partNumber: 1,
-        uploadId: 'probe'
-      }
-    )
+    probeMultipart
+      ? probe(
+          new URL(
+            '/presign-upload-part/capability-probe/probe.bin',
+            baseUrl
+          ).toString(),
+          {
+            partNumber: 1,
+            uploadId: 'probe'
+          }
+        )
+      : Promise.resolve(false)
   ])
 
   return {presigned, multipart}
@@ -319,14 +324,15 @@ export async function fileUploadMultipart(
     // by the proxy.
     const partStream = fs.createReadStream(file, {start, end})
     const s3Url = new URL(s3PartUrl)
+    const s3Request = s3Url.protocol === 'https:' ? https : http
     let etag: string
     try {
       etag = await new Promise<string>((resolve, reject) => {
-        const req = https.request(
+        const req = s3Request.request(
           {
             method: 'PUT',
             hostname: s3Url.hostname,
-            port: s3Url.port ? parseInt(s3Url.port) : 443,
+            port: s3Url.port ? parseInt(s3Url.port) : (s3Url.protocol === 'https:' ? 443 : 80),
             path: s3Url.pathname + s3Url.search,
             headers: {'Content-Length': String(partSize)},
             timeout: 300000

@@ -73,6 +73,7 @@ const process = __importStar(__nccwpck_require__(7282));
 const utils_1 = __nccwpck_require__(918);
 const axios_1 = __importStar(__nccwpck_require__(8757));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
+const http_1 = __importDefault(__nccwpck_require__(3685));
 const https_1 = __importDefault(__nccwpck_require__(5687));
 const MAX_UPLOAD_RETRIES = 10;
 function retryWithBackoff(fn, retries, label) {
@@ -181,12 +182,13 @@ function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
             // %2B → + and re-encodes it as + (space in query strings), corrupting the
             // AWS Signature V2 and causing 403 SignatureDoesNotMatch at Scaleway.
             const s3Url = new URL(s3PutUrl);
+            const s3Request = s3Url.protocol === 'https:' ? https_1.default : http_1.default;
             try {
                 yield new Promise((resolve, reject) => {
-                    const req = https_1.default.request({
+                    const req = s3Request.request({
                         method: 'PUT',
                         hostname: s3Url.hostname,
-                        port: s3Url.port ? parseInt(s3Url.port) : 443,
+                        port: s3Url.port ? parseInt(s3Url.port) : (s3Url.protocol === 'https:' ? 443 : 80),
                         path: s3Url.pathname + s3Url.search,
                         headers: { 'Content-Length': String(body_size) },
                         timeout: 300000
@@ -220,8 +222,8 @@ function fileUploadPresigned(client, baseUrl, buildName, file, filePath) {
 // Old nginx deployments (e.g. GCP) return 404 for unknown routes; new ones
 // return any other status (200, 400, 401, …) even on invalid probe parameters.
 // Both probes run in parallel to minimise latency.
-function probeServerCapabilities(client, baseUrl) {
-    return __awaiter(this, void 0, void 0, function* () {
+function probeServerCapabilities(client_1, baseUrl_1) {
+    return __awaiter(this, arguments, void 0, function* (client, baseUrl, probeMultipart = true) {
         const probe = (url, params) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const resp = yield client.get(url, {
@@ -237,10 +239,12 @@ function probeServerCapabilities(client, baseUrl) {
         });
         const [presigned, multipart] = yield Promise.all([
             probe(new URL('/presign-upload/capability-probe/probe.bin', baseUrl).toString()),
-            probe(new URL('/presign-upload-part/capability-probe/probe.bin', baseUrl).toString(), {
-                partNumber: 1,
-                uploadId: 'probe'
-            })
+            probeMultipart
+                ? probe(new URL('/presign-upload-part/capability-probe/probe.bin', baseUrl).toString(), {
+                    partNumber: 1,
+                    uploadId: 'probe'
+                })
+                : Promise.resolve(false)
         ]);
         return { presigned, multipart };
     });
@@ -290,13 +294,14 @@ function fileUploadMultipart(client, baseUrl, buildName, file, filePath) {
             // by the proxy.
             const partStream = fs_1.default.createReadStream(file, { start, end });
             const s3Url = new URL(s3PartUrl);
+            const s3Request = s3Url.protocol === 'https:' ? https_1.default : http_1.default;
             let etag;
             try {
                 etag = yield new Promise((resolve, reject) => {
-                    const req = https_1.default.request({
+                    const req = s3Request.request({
                         method: 'PUT',
                         hostname: s3Url.hostname,
-                        port: s3Url.port ? parseInt(s3Url.port) : 443,
+                        port: s3Url.port ? parseInt(s3Url.port) : (s3Url.protocol === 'https:' ? 443 : 80),
                         path: s3Url.pathname + s3Url.search,
                         headers: { 'Content-Length': String(partSize) },
                         timeout: 300000
@@ -1127,9 +1132,14 @@ function debugAxiosError(error) {
     core.info(debug);
 }
 function retryArtifacts(error) {
+    var _a;
+    // 409 OperationAborted is a transient S3 conflict — the error message
+    // explicitly says "Please try again".
+    const status = (_a = error.response) === null || _a === void 0 ? void 0 : _a.status;
     return (error.code !== 'ECONNABORTED' &&
         (!error.response ||
-            (error.response.status >= 500 && error.response.status <= 599)));
+            status === 409 ||
+            (status !== undefined && status >= 500 && status <= 599)));
 }
 function exponentialDelay(retryNumber = 0) {
     const delay = Math.pow(2, retryNumber) * 100;
