@@ -32,14 +32,9 @@ export async function setup(inputs: InputsArtifacts): Promise<void> {
 
 function logCopyOutput(data: string): void {
   const lines = data.split('\n').filter(l => l.trim())
-  const multipartLines = lines.filter(l => l.includes('multipart copy'))
-  if (multipartLines.length > 0) {
-    core.info(
-      `${multipartLines.length} file(s) required multipart copy (file >5 GB):`
-    )
-    for (const line of multipartLines) {
-      core.info(`  ${line}`)
-    }
+  const multipartCount = lines.filter(l => l.includes('multipart copy')).length
+  if (multipartCount > 0) {
+    core.info(`${multipartCount} file(s) required multipart copy (file >5 GB)`)
   } else {
     core.info('All files copied via standard CopyObject (no file >5 GB)')
   }
